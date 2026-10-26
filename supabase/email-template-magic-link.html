@@ -1,0 +1,13 @@
+<!--
+  Modèle d'e-mail « Magic Link » pour Supabase
+  (Authentication > Emails > Templates > Magic Link).
+  Sujet conseillé : Votre code de connexion TELECOM CONNECT LAB
+  {{ .Token }} = code à usage unique ; {{ .ConfirmationURL }} = lien magique.
+-->
+<h2>TELECOM CONNECT LAB</h2>
+<p>Bonjour,</p>
+<p>Voici votre code de connexion :</p>
+<p style="font-size:28px;font-weight:700;letter-spacing:6px;font-family:monospace">{{ .Token }}</p>
+<p>Saisissez ce code dans la page de connexion. Vous pouvez aussi cliquer sur ce lien depuis l'appareil où vous vous connectez :</p>
+<p><a href="{{ .ConfirmationURL }}">Me connecter à TELECOM CONNECT LAB</a></p>
+<p>Ce code et ce lien expirent rapidement et ne fonctionnent qu'une fois. Si vous n'avez rien demandé, ignorez cet e-mail.</p>

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="t">
+  <title id="t">TELECOM CONNECT LAB</title>
+  <rect x="2" y="2" width="60" height="60" rx="15" fill="#0B1D3A"/>
+  <rect x="2" y="2" width="60" height="60" rx="15" fill="none" stroke="#2BD4F5" stroke-opacity=".35" stroke-width="1.5"/>
+  <path d="M10 32h44" stroke="#8FB3D9" stroke-opacity=".45" stroke-width="1.4"/>
+  <path d="M21 14v36M43 14v36" stroke="#8FB3D9" stroke-opacity=".22" stroke-width="1.2"/>
+  <path d="M10 32c3.7-15 7.3-15 11 0s7.3 15 11 0 7.3-15 11 0 7.3 15 11 0" fill="none" stroke="#2BD4F5" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="26.5" cy="20.8" r="3.6" fill="#FFFFFF"/>
+</svg>

@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TELECOM CONNECT LAB</title>
+  <meta name="description" content="TELECOM CONNECT LAB — Apprendre · Simuler · Comprendre. Plateforme éducative interactive pour les étudiants en télécommunications : leçons, laboratoire de simulation, exercices corrigés et suivi de progression.">
+  <meta name="theme-color" content="#0B1D3A">
+  <link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="auth/auth.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Aller au contenu</a>
+
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a class="brand" href="#/" aria-label="TELECOM CONNECT LAB, retour à l’accueil">
+        <img src="assets/images/logo-mark.svg" alt="" width="36" height="36">
+        <span class="brand__name">TELECOM CONNECT <span>LAB</span></span>
+      </a>
+      <button type="button" class="menu-toggle" id="menu-toggle" aria-controls="site-nav" aria-expanded="false" aria-label="Ouvrir le menu">
+        <span class="menu-toggle__bars" aria-hidden="true"></span>
+      </button>
+      <nav class="nav" id="site-nav" aria-label="Navigation principale">
+        <ul class="nav__list" id="nav-list"></ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="main" tabindex="-1">
+    <div class="container page">
+      <div class="loading" role="status"><span class="spinner" aria-hidden="true"></span>Chargement de la plateforme…</div>
+      <noscript><p class="callout callout--warn">TELECOM CONNECT LAB a besoin de JavaScript pour afficher les leçons, les simulations et les exercices. Activez JavaScript dans votre navigateur.</p></noscript>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container site-footer__grid">
+      <div class="site-footer__brand">
+        <img src="assets/images/logo-on-dark.svg" alt="TELECOM CONNECT LAB" width="220" height="41" class="site-footer__logo">
+        <p class="site-footer__slogan">Apprendre · Simuler · Comprendre</p>
+        <p>Du réel au virtuel. De la théorie à la pratique.</p>
+      </div>
+      <nav aria-label="Liens du pied de page">
+        <h2 class="site-footer__title">Explorer</h2>
+        <ul>
+          <li><a href="#/lecons">Mes leçons</a></li>
+          <li><a href="#/laboratoire">Mon laboratoire</a></li>
+          <li><a href="#/defis">Mes défis</a></li>
+          <li><a href="#/progression">Ma progression</a></li>
+        </ul>
+      </nav>
+      <div>
+        <h2 class="site-footer__title">À propos</h2>
+        <p>Plateforme pédagogique qui complète les cours dispensés par les enseignants. Les simulations reposent sur des modèles idéaux.</p>
+        <p class="site-footer__storage" id="footer-storage"></p>
+      </div>
+    </div>
+    <div class="container site-footer__bottom">
+      <p>© <span id="footer-year">2026</span> TELECOM CONNECT LAB</p>
+      <p><a href="#/compte">Mon compte</a></p>
+    </div>
+  </footer>
+
+  <div class="toast-host" id="toast-host" aria-live="polite"></div>
+
+  <!-- Configuration publique (aucun secret) -->
+  <script src="config.js"></script>
+  <!-- Socle -->
+  <script src="modules/signaux/signal-math.js"></script>
+  <script src="core/validate.js"></script>
+  <script src="assets/icons/icons.js"></script>
+  <script src="core/utils.js"></script>
+  <script src="core/plot.js"></script>
+  <script src="core/plot-xy.js"></script>
+  <script src="core/store.js"></script>
+  <script src="auth/auth.js"></script>
+  <script src="core/sync.js"></script>
+  <script src="core/labkit.js"></script>
+  <!-- Outils communs des exercices -->
+  <script src="core/exercise-kit.js"></script>
+  <!-- Module « Comprendre les signaux » -->
+  <script src="modules/signaux/lesson.js"></script>
+  <script src="modules/signaux/simulation.js"></script>
+  <script src="modules/signaux/exercises.js"></script>
+  <!-- Module « Ondes électromagnétiques » : calculs, simulation, leçon, exercices -->
+  <script src="modules/ondes-em/wave-math.js"></script>
+  <script src="modules/ondes-em/simulation.js"></script>
+  <script src="modules/ondes-em/lesson.js"></script>
+  <script src="modules/ondes-em/exercises.js"></script>
+  <!-- Module « Antennes » : calculs, simulation, leçon, exercices -->
+  <script src="modules/antennes/antenna-math.js"></script>
+  <script src="modules/antennes/simulation.js"></script>
+  <script src="modules/antennes/lesson.js"></script>
+  <script src="modules/antennes/exercises.js"></script>
+  <!-- Module « Propagation radio » : calculs, simulation, leçon, exercices -->
+  <script src="modules/propagation/propagation-math.js"></script>
+  <script src="modules/propagation/simulation.js"></script>
+  <script src="modules/propagation/lesson.js"></script>
+  <script src="modules/propagation/exercises.js"></script>
+  <!-- Module « Chaîne de transmission » : calculs, simulation, leçon, exercices -->
+  <script src="modules/chaine/chain-math.js"></script>
+  <script src="modules/chaine/simulation.js"></script>
+  <script src="modules/chaine/lesson.js"></script>
+  <script src="modules/chaine/exercises.js"></script>
+  <!-- Module « Modulation » : calculs, simulation, leçon, exercices -->
+  <script src="modules/modulation/modulation-math.js"></script>
+  <script src="modules/modulation/simulation.js"></script>
+  <script src="modules/modulation/lesson.js"></script>
+  <script src="modules/modulation/exercises.js"></script>
+  <!-- Module « Fibre optique » : calculs, simulation, leçon, exercices -->
+  <script src="modules/fibre/fiber-math.js"></script>
+  <script src="modules/fibre/simulation.js"></script>
+  <script src="modules/fibre/lesson.js"></script>
+  <script src="modules/fibre/exercises.js"></script>
+  <!-- Module « Réseaux mobiles » : calculs, simulation, leçon, exercices -->
+  <script src="modules/mobiles/mobile-math.js"></script>
+  <script src="modules/mobiles/simulation.js"></script>
+  <script src="modules/mobiles/lesson.js"></script>
+  <script src="modules/mobiles/exercises.js"></script>
+  <!-- Module « Réseaux IP » : calculs, simulation, leçon, exercices -->
+  <script src="modules/ip/ip-math.js"></script>
+  <script src="modules/ip/simulation.js"></script>
+  <script src="modules/ip/lesson.js"></script>
+  <script src="modules/ip/exercises.js"></script>
+  <script src="modules/registry.js"></script>
+  <!-- Pages -->
+  <script src="pages/common.js"></script>
+  <script src="pages/home.js"></script>
+  <script src="pages/lessons.js"></script>
+  <script src="pages/lab.js"></script>
+  <script src="pages/challenges.js"></script>
+  <script src="pages/progress.js"></script>
+  <script src="pages/account.js"></script>
+  <!-- Démarrage -->
+  <script src="script.js"></script>
+</body>
+</html>

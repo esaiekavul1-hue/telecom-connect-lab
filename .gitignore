@@ -1,0 +1,21 @@
+﻿node_modules/
+.git/
+.env
+.env.*
+!.env.example
+.DS_Store
+
+# Android
+android/.gradle/
+android/local.properties
+android/**/build/
+
+# iOS
+ios/Pods/
+ios/build/
+ios/App/DerivedData/
+ios/App/App.xcworkspace/xcuserdata/
+ios/App/*.xcodeproj/xcuserdata/
+
+# macOS
+*.xcuserstate

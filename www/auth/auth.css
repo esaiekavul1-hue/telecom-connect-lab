@@ -1,0 +1,64 @@
+/* =====================================================================
+   TELECOM CONNECT LAB — Styles de la connexion sans mot de passe et du compte
+   ===================================================================== */
+
+.auth-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 28px; align-items: start; }
+.auth-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 28px; }
+.auth-card h1 { font-size: 1.6rem; }
+.auth-card--center { text-align: center; max-width: 560px; margin: 0 auto 24px; }
+.auth-card__icon { width: 44px; height: 44px; color: var(--cyan-600); margin-bottom: 10px; }
+.auth-card__icon--ok { color: var(--ok); }
+.auth-card__actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+
+.auth-tabs { display: grid; grid-template-columns: 1fr 1fr; background: #EDF2F8; border-radius: 12px; padding: 4px; margin: 6px 0 22px; }
+.auth-tab { text-align: center; padding: 10px 8px; border-radius: 9px; text-decoration: none; color: var(--ink-2); font-weight: 650; }
+.auth-tab:hover { color: var(--ink); }
+.auth-tab.is-active { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(19, 35, 59, .12); }
+
+.auth-form { display: grid; gap: 16px; }
+.field label { display: block; font-weight: 700; margin-bottom: 6px; }
+.field input {
+  width: 100%; min-height: 48px; border: 1.5px solid var(--line-strong); border-radius: var(--radius);
+  padding: 0 14px; font: inherit; font-size: 16px; background: #fff; color: var(--ink);
+}
+.field input:focus { border-color: var(--cyan-600); }
+.field input[disabled] { background: #F2F5F9; color: var(--muted); }
+.field-hint { font-size: 13.5px; color: var(--muted); margin: 6px 0 0; }
+.code-input { font-size: 1.6rem !important; letter-spacing: .3em; font-variant-numeric: tabular-nums; text-align: center; font-weight: 750; }
+.auth-switch { text-align: center; font-size: 15px; margin: 0; color: var(--ink-2); }
+.auth-form .btn .spinner { width: 16px; height: 16px; }
+
+.sent { display: flex; gap: 14px; align-items: flex-start; background: var(--cyan-50); border: 1px solid #BFE6F2; border-radius: var(--radius); padding: 14px 16px; margin-bottom: 18px; }
+.sent__icon { width: 28px; height: 28px; color: var(--cyan-600); flex: none; }
+.sent p { margin: 0 0 4px; }
+.resend { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 16px; font-size: 15px; }
+
+.auth-aside { background: var(--navy-900); color: #DCE6F3; border-radius: var(--radius-lg); padding: 22px; --focus: var(--cyan-300); }
+.auth-aside h2 { color: #fff; font-size: 1.05rem; display: flex; align-items: center; gap: 8px; }
+.auth-aside h2 .icon { color: var(--cyan-400); }
+.auth-how { padding-left: 1.2em; }
+.auth-how li { margin-bottom: 8px; }
+.auth-how li::marker { color: var(--cyan-400); font-weight: 800; }
+.auth-aside .muted { color: #AFC1D8; font-size: 14px; margin: 0; }
+.auth-off { margin-top: 0; }
+.auth-off ul { padding-left: 1.2em; }
+
+.profile { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 18px; align-items: center; }
+.profile__avatar { width: 64px; height: 64px; border-radius: 18px; background: var(--navy-900); color: var(--cyan-400); display: grid; place-items: center; font-size: 1.8rem; font-weight: 800; }
+.profile__id h2 { margin: 0 0 4px; font-size: 1.35rem; }
+.profile__email { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 2px; color: var(--ink-2); word-break: break-all; }
+.profile__email .icon { width: 18px; height: 18px; color: var(--muted); }
+.profile .muted { margin: 0; font-size: 14px; }
+.name-form { grid-column: 1 / -1; }
+.name-form label { font-weight: 700; display: block; margin-bottom: 6px; }
+.name-form__row { display: flex; gap: 8px; flex-wrap: wrap; }
+.name-form input { flex: 1; min-width: 200px; min-height: 40px; border: 1.5px solid var(--line-strong); border-radius: 8px; padding: 0 12px; font: inherit; }
+
+@media (max-width: 920px) {
+  .auth-layout { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .auth-card { padding: 20px 16px; }
+  .profile { grid-template-columns: auto minmax(0, 1fr); }
+  .profile > .btn { grid-column: 1 / -1; justify-self: start; }
+}
