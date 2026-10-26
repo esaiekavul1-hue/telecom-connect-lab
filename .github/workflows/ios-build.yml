@@ -1,5 +1,4 @@
 name: Build iOS - TELECOM CONNECT LAB
-
 'on':
   workflow_dispatch:
 
