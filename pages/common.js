@@ -63,6 +63,10 @@
       ['lab', '#/laboratoire/' + m.id, 'flask', 'Laboratoire'],
       ['exercises', '#/defis/' + m.id, 'target', 'Défis']
     ].filter(function (it) { return parts[it[0]]; });
+    if (TCL.curriculum.competencies[m.id]) {
+      items.push(['validation', '#/competence/' + m.id, 'shield', 'Validation']);
+      items.push(['assistant', '#/assistant/' + m.id, 'sparkle', 'Assistant']);
+    }
     return '<nav class="module-nav" aria-label="Parties du module ' + esc(m.title) + '"><span class="module-nav__title">' + I(m.icon) + '<span>' + esc(m.title) + '</span></span><ul>' +
       items.map(function (it) {
         var on = it[0] === active;

@@ -18,7 +18,7 @@ var url = require('url');
 
 var ANON_KEY = 'test-anon-key-0123456789abcdefghijklmnopqrstuvwxyz';
 
-function createServer() {
+function createServer(hooks) {
   var users = {};        // email -> user
   var otps = {};         // email -> { code, exp, linkToken, sentAt }
   var sessions = {};     // access_token -> { userId, exp }
@@ -139,6 +139,9 @@ function createServer() {
         delete sessions[t];
         return send(res, 204);
       }
+
+      // ---- Base réelle (PostgreSQL local) : mode découverte et tests V2 ----
+      if (hooks && /^\/(rest|functions)\/v1\//.test(u.pathname)) return hooks.handle({ req: req, res: res, u: u, body: body, raw: Buffer.concat(chunks).toString(), user: authUser(req), send: send });
 
       // ---- Table progress (avec règle « chacun sa ligne ») ----
       if (u.pathname === '/rest/v1/progress') {

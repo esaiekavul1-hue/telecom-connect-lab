@@ -4,11 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TELECOM CONNECT LAB</title>
-  <meta name="description" content="TELECOM CONNECT LAB — Apprendre · Simuler · Comprendre. Plateforme éducative interactive pour les étudiants en télécommunications : leçons, laboratoire de simulation, exercices corrigés et suivi de progression.">
+  <meta name="description" content="TELECOM CONNECT LAB — Apprendre · Simuler · Pratiquer · Innover. Plateforme éducative interactive pour les étudiants en télécommunications : leçons, laboratoire de simulation, exercices corrigés et suivi de progression.">
   <meta name="theme-color" content="#0B1D3A">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://*.supabase.co http://localhost:* http://127.0.0.1:*; base-uri 'self'; form-action 'self'">
   <link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="auth/auth.css">
+  <link rel="stylesheet" href="style-v2.css">
 </head>
 <body>
   <a class="skip-link" href="#main">Aller au contenu</a>
@@ -39,15 +41,17 @@
     <div class="container site-footer__grid">
       <div class="site-footer__brand">
         <img src="assets/images/logo-on-dark.svg" alt="TELECOM CONNECT LAB" width="220" height="41" class="site-footer__logo">
-        <p class="site-footer__slogan">Apprendre · Simuler · Comprendre</p>
+        <p class="site-footer__slogan">Apprendre · Simuler · Pratiquer · Innover</p>
         <p>Du réel au virtuel. De la théorie à la pratique.</p>
       </div>
       <nav aria-label="Liens du pied de page">
         <h2 class="site-footer__title">Explorer</h2>
         <ul>
+          <li><a href="#/parcours">Parcours</a></li>
           <li><a href="#/lecons">Mes leçons</a></li>
           <li><a href="#/laboratoire">Mon laboratoire</a></li>
           <li><a href="#/defis">Mes défis</a></li>
+          <li><a href="#/evaluations">Évaluations</a></li>
           <li><a href="#/progression">Ma progression</a></li>
         </ul>
       </nav>
@@ -67,6 +71,7 @@
 
   <!-- Configuration publique (aucun secret) -->
   <script src="config.js"></script>
+  <script src="version.js"></script>
   <!-- Socle -->
   <script src="modules/signaux/signal-math.js"></script>
   <script src="core/validate.js"></script>
@@ -80,6 +85,11 @@
   <script src="core/labkit.js"></script>
   <!-- Outils communs des exercices -->
   <script src="core/exercise-kit.js"></script>
+  <!-- Module « Circuits électriques » : calculs, simulation, leçon, exercices -->
+  <script src="modules/circuits/circuit-math.js"></script>
+  <script src="modules/circuits/simulation.js"></script>
+  <script src="modules/circuits/lesson.js"></script>
+  <script src="modules/circuits/exercises.js"></script>
   <!-- Module « Comprendre les signaux » -->
   <script src="modules/signaux/lesson.js"></script>
   <script src="modules/signaux/simulation.js"></script>
@@ -126,6 +136,9 @@
   <script src="modules/ip/exercises.js"></script>
   <script src="modules/registry.js"></script>
   <!-- Pages -->
+  <script src="core/curriculum.js"></script>
+  <script src="core/mastery.js"></script>
+  <script src="core/platform.js"></script>
   <script src="pages/common.js"></script>
   <script src="pages/home.js"></script>
   <script src="pages/lessons.js"></script>
@@ -133,6 +146,11 @@
   <script src="pages/challenges.js"></script>
   <script src="pages/progress.js"></script>
   <script src="pages/account.js"></script>
+  <script src="pages/parcours.js"></script>
+  <script src="pages/exams.js"></script>
+  <script src="pages/assistant.js"></script>
+  <script src="pages/dashboard.js"></script>
+  <script src="pages/admin.js"></script>
   <!-- Démarrage -->
   <script src="script.js"></script>
 </body>

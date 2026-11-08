@@ -153,7 +153,7 @@
         ['Nombre d’onde k = 2π/λ', 'r-k'], ['Antenne demi-onde λ/2', 'r-l2'], ['Antenne quart d’onde λ/4', 'r-l4'], ['Bande (UIT)', 'r-band'], ['λ sur la règle', 'r-n']]),
       K.explainBox('<div class="phasor-box"><h2>Une onde, deux champs</h2>' + emDiagram() + '<p>Les champs électrique E et magnétique B oscillent ensemble, perpendiculairement entre eux et à la direction de propagation. Le graphique montre E.</p></div>'),
       '</div>',
-      '<aside class="lab__controls" aria-label="Commandes de la simulation"><form class="controls" onsubmit="return false" novalidate>',
+      '<aside class="lab__controls" aria-label="Commandes de la simulation"><form class="controls" novalidate>',
       K.range({ id: 'in-f', label: 'Fréquence <var>f</var>', min: 0, max: 1000, step: 1, unit: 'MHz', srLabel: 'Fréquence en mégahertz',
         hint: 'De 3 kHz à 300 GHz (curseur logarithmique). Le champ se saisit en MHz : 0,003 à 300 000.',
         extra: K.chips('Fréquences courantes', PRESETS.map(function (p) { return [p[0], p[1]]; }), 'preset') }),

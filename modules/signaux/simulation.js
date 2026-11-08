@@ -369,7 +369,7 @@
       '</div>',
       '</div>',
       '<aside class="lab__controls" aria-label="Commandes de la simulation">',
-      '<form class="controls" onsubmit="return false" novalidate>',
+      '<form class="controls" novalidate>',
       '<div class="control">',
       '<div class="control__top"><label for="in-A-range">Amplitude <var>A</var></label><output id="out-A" for="in-A-range"></output></div>',
       '<input type="range" id="in-A-range" min="0" max="10" step="0.1" aria-describedby="hint-A">',

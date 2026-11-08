@@ -30,6 +30,8 @@
 
   /* L'ordre de ce tableau est le parcours conseillé. */
   var modules = [
+    { id: 'circuits', category: 'bases', parts: ALL, icon: 'circuit', title: 'Circuits électriques',
+      text: 'Loi d’Ohm, lois de Kirchhoff, diviseur de tension, instruments de mesure et circuit RC.' },
     { id: 'signaux', category: 'bases', parts: ALL, icon: 'wave', title: 'Comprendre les signaux',
       text: 'Amplitude, fréquence, période et phase d’un signal sinusoïdal.' },
     { id: 'ondes-em', category: 'ondes', parts: ALL, icon: 'em', title: 'Ondes électromagnétiques',

@@ -183,7 +183,7 @@
         ['Longueur maximale', 'r-lm'], ['Temps de parcours (L·n₁/c)', 'r-tt'], ['Dispersion modale ΔT', 'r-dt'], ['Débit max. (≈ 1/2ΔT)', 'r-br'], ['Puissance reçue (mW)', 'r-prw']]),
       K.explainBox(''),
       '</div>',
-      '<aside class="lab__controls" aria-label="Commandes de la simulation"><form class="controls" onsubmit="return false" novalidate>',
+      '<aside class="lab__controls" aria-label="Commandes de la simulation"><form class="controls" novalidate>',
       '<p class="controls__group">Guidage de la lumière</p>',
       K.range({ id: 'in-theta', label: 'Angle d’entrée du rayon <var>θ</var>', min: 0, max: 40, step: 0.5, unit: '°', srLabel: 'Angle d’entrée en degrés', hint: 'De 0 à 40°, mesuré depuis l’axe de la fibre, dans l’air.' }),
       K.range({ id: 'in-n1', label: 'Indice du cœur <var>n</var><sub>1</sub>', min: 1.40, max: 1.60, step: 0.001, unit: '', srLabel: 'Indice du cœur', hint: 'De 1,40 à 1,60 (verre de silice : environ 1,45 à 1,48).' }),

@@ -196,7 +196,7 @@
       '<dl class="readouts readouts--4" aria-label="Valeurs calculées" id="mod-readouts"></dl>',
       K.explainBox(''),
       '</div>',
-      '<aside class="lab__controls" aria-label="Commandes de la simulation"><form class="controls" onsubmit="return false" novalidate>',
+      '<aside class="lab__controls" aria-label="Commandes de la simulation"><form class="controls" novalidate>',
       K.segmented({ id: 'in-type', label: 'Type de modulation', options: [['AM', 'AM'], ['FM', 'FM'], ['NUM', 'Numérique']], hint: 'AM et FM transmettent un message analogique ; « Numérique » transmet une suite de bits.' }).replace('class="segmented"', 'class="segmented segmented--3"'),
       '<div id="ctl-num">' + K.select({ id: 'in-dig', label: 'Modulation numérique', options: DIGS, hint: 'Ce que chaque bit modifie : amplitude, fréquence ou phase.' }) +
         '<div class="control"><label for="in-bits">Bits à émettre (8 bits)</label><div class="control__num"><input type="text" id="in-bits" inputmode="numeric" maxlength="8" autocomplete="off" spellcheck="false" aria-describedby="in-bits-hint in-bits-err" class="bits-input"><button type="button" class="btn btn--ghost btn--sm" id="bits-rand">Tirage</button></div>' +

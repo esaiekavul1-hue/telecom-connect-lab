@@ -9,8 +9,9 @@
  *  - aucun mot de passe n'est demandé ni enregistré ;
  *  - l'utilisateur n'est considéré comme connecté QUE si le service a validé le
  *    code (ou le lien) reçu par e-mail et a délivré une session ;
- *  - les jetons de session ne sont JAMAIS écrits dans localStorage : ils sont
- *    conservés dans sessionStorage (propre à l'onglet, effacé à sa fermeture) ;
+ *  - la session est conservée dans le stockage local pour rester connecté à la
+ *    réouverture de l'application ; la politique CSP d'index.html limite le
+ *    risque d'exfiltration et la déconnexion l'efface ;
  *  - seule la clé PUBLIQUE (anon / publishable) est utilisée côté navigateur.
  *
  * Configuration : voir config.js et README.md (section « Activer la connexion »).

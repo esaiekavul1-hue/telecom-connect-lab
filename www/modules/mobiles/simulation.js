@@ -200,7 +200,7 @@
         ['Distance à la station', 'r-dist'], ['Signal / interférences au téléphone', 'r-sir'], ['Deuxième station', 'r-2nd'], ['Transfert (handover)', 'r-ho'], ['Couverture', 'r-ok']]),
       K.explainBox(''),
       '</div>',
-      '<aside class="lab__controls" aria-label="Commandes de la simulation"><form class="controls" onsubmit="return false" novalidate>',
+      '<aside class="lab__controls" aria-label="Commandes de la simulation"><form class="controls" novalidate>',
       '<div class="control"><p class="control__label">Scénarios</p>' + K.chips('Scénarios pédagogiques', Object.keys(SCENARIOS).map(function (k) { return [k, SCENARIOS[k].label]; }), 'scenario') + '</div>',
       K.select({ id: 'in-N', label: 'Motif de réutilisation <var>N</var>', options: NS.map(function (n) { var sh = Mo.shiftFor(n); return [String(n), 'N = ' + n + ' (i = ' + sh[0] + ', j = ' + sh[1] + ')']; }), hint: 'Nombre de cellules entre lesquelles on partage les fréquences.' }),
       K.range({ id: 'in-R', label: 'Rayon des cellules <var>R</var>', min: 0, max: 1000, step: 1, unit: 'km', srLabel: 'Rayon en kilomètres', hint: 'De 0,2 à 10 km (curseur logarithmique).' }),

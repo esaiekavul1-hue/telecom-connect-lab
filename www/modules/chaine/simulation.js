@@ -231,7 +231,7 @@
       '<div class="scope-panel"><p class="scope-panel__title">Taux d’erreur binaire (TEB) en fonction du rapport signal sur bruit</p><div class="scope-panel__plot" id="ber-plot"></div><p class="scope-panel__cursor" id="ber-note"></p></div>',
       K.explainBox(''),
       '</div>',
-      '<aside class="lab__controls" aria-label="Commandes de la simulation"><form class="controls" onsubmit="return false" novalidate>',
+      '<aside class="lab__controls" aria-label="Commandes de la simulation"><form class="controls" novalidate>',
       '<div class="control"><label for="in-text">Message à transmettre</label><input type="text" id="in-text" class="text-input" maxlength="12" autocomplete="off" spellcheck="false" aria-describedby="in-text-hint in-text-err"><p class="control__hint" id="in-text-hint">De 1 à 12 caractères (lettres sans accent, chiffres, ponctuation).</p><p class="field-error" id="in-text-err" aria-live="polite"></p></div>',
       K.segmented({ id: 'in-coding', label: 'Codage de canal', options: [['none', 'Aucun'], ['rep3', 'Répétition ×3']] }),
       K.range({ id: 'in-pt', label: 'Puissance d’émission <var>P</var><sub>t</sub>', min: 0, max: 30, step: 0.5, unit: 'dBm', srLabel: 'Puissance d’émission en dBm', hint: 'De 0 à 30 dBm (1 mW à 1 W).' }),

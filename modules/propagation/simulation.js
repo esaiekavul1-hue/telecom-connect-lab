@@ -219,7 +219,7 @@
       '<section class="box lab__aux" id="obs-box"><h3>Profil du trajet (échelle verticale exagérée)</h3><div id="profile"></div>' + K.readouts([['Rayon de Fresnel à l’obstacle', 'r-f1'], ['Dégagement h / F₁', 'r-clr'], ['Paramètre ν', 'r-nu'], ['Perte de diffraction J(ν)', 'r-j']]) + '</section>',
       K.explainBox('<div class="phasor-box budget-box"><h2>Bilan de liaison</h2><ol class="budget" id="budget"></ol></div>', true),
       '</div>',
-      '<aside class="lab__controls" aria-label="Commandes de la simulation"><form class="controls" onsubmit="return false" novalidate>',
+      '<aside class="lab__controls" aria-label="Commandes de la simulation"><form class="controls" novalidate>',
       K.segmented({ id: 'in-model', label: 'Modèle de propagation', options: [['libre', 'Espace libre'], ['sol', 'Avec réflexion sur le sol']], hint: 'Le second modèle ajoute un rayon réfléchi par un sol plan (deux rayons).' }),
       '<div id="ctl-h">' + K.range({ id: 'in-ht', label: 'Hauteur de l’antenne d’émission <var>h</var><sub>t</sub>', min: 2, max: 100, step: 1, unit: 'm', srLabel: 'Hauteur d’émission en mètres', hint: 'De 2 à 100 m (pylône).' }) +
         K.range({ id: 'in-hr', label: 'Hauteur de l’antenne de réception <var>h</var><sub>r</sub>', min: 1, max: 30, step: 0.5, unit: 'm', srLabel: 'Hauteur de réception en mètres', hint: 'De 1 à 30 m (1,5 m : un téléphone tenu en main).' }) + '</div>',

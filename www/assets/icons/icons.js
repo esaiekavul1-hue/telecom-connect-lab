@@ -39,6 +39,8 @@
     modulation: '<path d="M3 12c.8-3 1.5-3 2.2 0s1.5 3 2.2 0 1.5-6 2.3-6 1.5 12 2.3 12 1.5-6 2.2-6 1.5 3 2.3 0 1.4-3 2.2 0 1.5 3 2.3 0"/>',
     em: '<path d="M3 12c1.5-4 3-4 4.5 0s3 4 4.5 0 3-4 4.5 0 3 4 4.5 0"/><path d="M3 12h18" opacity=".45"/><path d="M7.5 6.5v11" opacity=".45"/>',
     propagation: '<circle cx="5" cy="17" r="1.6"/><path d="M8.6 13.4a5 5 0 0 1 0 7.2"/><path d="M11.4 10.6a9 9 0 0 1 0 12.8" transform="translate(0 -3)"/><path d="M14 6a13 13 0 0 1 2 11"/>',
+    circuit: '<path d="M3 12h4l1.5-3 3 6 3-6 1.5 3h5"/><circle cx="3" cy="12" r=".6"/><circle cx="21" cy="12" r=".6"/>',
+    route: '<circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h7a3.5 3.5 0 0 0 0-7H9a3.5 3.5 0 0 1 0-7h7"/>',
     lock: '<rect x="5" y="10.5" width="14" height="10" rx="1.5"/><path d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3"/>',
     sparkle: '<path d="M12 4v4"/><path d="M12 16v4"/><path d="M4 12h4"/><path d="M16 12h4"/><path d="m6.6 6.6 2.1 2.1"/><path d="m15.3 15.3 2.1 2.1"/><path d="m6.6 17.4 2.1-2.1"/><path d="m15.3 8.7 2.1-2.1"/>'
   };

@@ -218,7 +218,7 @@
         ['Longueur d’un dipôle λ/2', 'r-l2'], ['Longueur du réseau', 'r-len'], ['Surface effective Ae', 'r-ae'], ['Perte de polarisation', 'r-pol'], ['Puissance captée (polar.)', 'r-plf']]),
       K.explainBox(''),
       '</div>',
-      '<aside class="lab__controls" aria-label="Commandes de la simulation"><form class="controls" onsubmit="return false" novalidate>',
+      '<aside class="lab__controls" aria-label="Commandes de la simulation"><form class="controls" novalidate>',
       K.select({ id: 'in-type', label: 'Type d’élément', options: TYPES, hint: 'Dipôles verticaux, alimentés en leur centre.' }),
       K.range({ id: 'in-N', label: 'Nombre d’éléments <var>N</var>', min: 1, max: 8, step: 1, unit: '', srLabel: 'Nombre d’éléments', hint: 'De 1 à 8 dipôles alignés (réseau linéaire).' }),
       '<div id="ctl-array">' +

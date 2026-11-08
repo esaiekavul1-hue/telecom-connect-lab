@@ -12,12 +12,13 @@
   var I = TCL.icon;
 
   var NAV = [
-    { id: 'home', href: '#/', label: 'Accueil', icon: 'home' },
+    { id: 'parcours', href: '#/parcours', label: 'Parcours', icon: 'route' },
     { id: 'lessons', href: '#/lecons', label: 'Mes leçons', icon: 'book' },
     { id: 'lab', href: '#/laboratoire', label: 'Mon laboratoire', icon: 'flask' },
     { id: 'challenges', href: '#/defis', label: 'Mes défis', icon: 'target' },
-    { id: 'progress', href: '#/progression', label: 'Ma progression', icon: 'chart' },
-    { id: 'account', href: '#/compte', label: 'Mon compte', icon: 'user' }
+    { id: 'evaluations', href: '#/evaluations', label: 'Évaluations', icon: 'shield' },
+    { id: 'assistant', href: '#/assistant', label: 'Assistant', icon: 'sparkle' },
+    { id: 'dashboard', href: '#/mon-espace', label: 'Mon espace', icon: 'user' }
   ];
 
   var ROUTES = [
@@ -28,8 +29,18 @@
     { re: /^\/laboratoire\/([a-z0-9-]+)\/?$/, page: 'lab', nav: 'lab', keys: ['lab'] },
     { re: /^\/defis\/?$/, page: 'challenges', nav: 'challenges' },
     { re: /^\/defis\/([a-z0-9-]+)\/?$/, page: 'challenge', nav: 'challenges', keys: ['module'] },
-    { re: /^\/progression\/?$/, page: 'progress', nav: 'progress' },
-    { re: /^\/compte\/?$/, page: 'account', nav: 'account' },
+    { re: /^\/progression\/?$/, page: 'progress', nav: 'dashboard' },
+    { re: /^\/compte\/?$/, page: 'account', nav: 'dashboard' },
+    { re: /^\/parcours\/?$/, page: 'spaces', nav: 'parcours' },
+    { re: /^\/parcours\/([a-z0-9-]+)\/?$/, page: 'space', nav: 'parcours', keys: ['space'] },
+    { re: /^\/competence\/([a-z0-9-]+)\/?$/, page: 'competence', nav: 'parcours', keys: ['module'] },
+    { re: /^\/evaluations\/?$/, page: 'evaluations', nav: 'evaluations' },
+    { re: /^\/evaluations\/([a-z0-9-]+)\/?$/, page: 'assessment', nav: 'evaluations', keys: ['id'] },
+    { re: /^\/resultat\/([a-f0-9-]+)\/?$/, page: 'result', nav: 'evaluations', keys: ['id'] },
+    { re: /^\/attestation\/([a-z0-9-]+)\/?$/, page: 'attestation', nav: 'dashboard', keys: ['module'] },
+    { re: /^\/assistant(?:\/([a-z0-9-]+))?\/?$/, page: 'assistant', nav: 'assistant', keys: ['module'] },
+    { re: /^\/mon-espace\/?$/, page: 'dashboard', nav: 'dashboard' },
+    { re: /^\/admin\/?$/, page: 'admin', nav: 'dashboard' },
     { re: /^\/connexion\/?$/, page: 'login', nav: 'login', fixed: { mode: 'login' } },
     { re: /^\/inscription\/?$/, page: 'login', nav: 'login', fixed: { mode: 'signup' } }
   ];
@@ -275,6 +286,7 @@
       if (st.status === 'signedIn' && st.user && st.user.id !== lastUserId) {
         lastUserId = st.user.id;
         TCL.sync.start(st.user);
+        TCL.official.setUser(st.user);
       } else if (
         st.status !== 'signedIn' &&
         st.status !== 'checking' &&
@@ -282,16 +294,28 @@
       ) {
         lastUserId = null;
         TCL.sync.stop();
+        TCL.official.setUser(null);
       }
 
       renderFooterStorage();
 
       if (
         document.body.dataset.ready &&
-        ['account', 'login', 'progress'].indexOf(parse().route.page) >= 0
+        ['account', 'login', 'progress', 'spaces', 'space', 'competence', 'evaluations', 'dashboard'].indexOf(parse().route.page) >= 0
       ) {
         render(true);
       }
+    });
+
+    TCL.official.onChange(function () {
+      var page = parse().route.page;
+      var gated = page === 'admin' && !document.querySelector('#adm');
+      if (document.body.dataset.ready && (gated || ['spaces', 'space', 'competence', 'evaluations', 'dashboard', 'attestation'].indexOf(page) >= 0)) render(true);
+    });
+
+    // Les formulaires des laboratoires se pilotent sans envoi de page.
+    document.addEventListener('submit', function (e) {
+      if (e.target.classList && e.target.classList.contains('controls')) e.preventDefault();
     });
 
     TCL.sync.onChange(function () {
