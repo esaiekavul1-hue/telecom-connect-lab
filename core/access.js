@@ -120,10 +120,11 @@
   /* --------------------------- Chargement du catalogue --------------------------- */
 
   /*
-   * Le catalogue n'est téléchargé qu'après authentification : un visiteur ne
-   * reçoit que la démonstration. Ordre identique à celui des dépendances.
+   * Les contenus sont téléchargés après authentification et seulement pour le
+   * parcours de l'étudiant : un téléphone ne charge pas tout le catalogue.
+   * L'ordre d'exécution des scripts suit l'ordre d'insertion.
    */
-  var FILES = {
+  var V1_FILES = {
     circuits: ['simulation', 'lesson', 'exercises'],
     signaux: ['lesson', 'simulation', 'exercises'],
     'ondes-em': ['wave-math', 'simulation', 'lesson', 'exercises'],
@@ -135,28 +136,56 @@
     mobiles: ['mobile-math', 'simulation', 'lesson', 'exercises'],
     ip: ['ip-math', 'simulation', 'lesson', 'exercises']
   };
-  var loaded = false, loading = null;
+  var KIT = ['core/schematic.js', 'core/module-kit.js', 'core/lab-engine.js'];
+  var loadedFiles = {}, loadedModules = {}, loading = null;
+
+  function filesOf(id) {
+    var f = V1_FILES[id];
+    return f ? f.map(function (n) { return 'modules/' + id + '/' + n + '.js'; }) : ['modules/' + id + '/' + id + '.js'];
+  }
 
   function loadScript(src) {
+    if (loadedFiles[src]) return Promise.resolve();
     return new Promise(function (resolve, reject) {
       var s = document.createElement('script');
       s.src = src; s.async = false;
-      s.onload = resolve;
+      s.onload = function () { loadedFiles[src] = 1; resolve(); };
       s.onerror = function () { s.remove(); reject(new Error('Chargement impossible : ' + src)); };
       document.body.appendChild(s);
     });
   }
 
-  function loadCatalogue() {
-    if (loaded) return Promise.resolve();
-    if (loading) return loading;
-    var list = [];
-    Object.keys(FILES).forEach(function (id) { FILES[id].forEach(function (f) { list.push('modules/' + id + '/' + f + '.js'); }); });
-    loading = Promise.all(list.map(loadScript)).then(function () { loaded = true; loading = null; }, function (e) { loading = null; throw e; });
+  /** Ce qu'il faut télécharger ; null : le parcours n'est pas encore connu, on attend. */
+  function wanted() {
+    var m = mode();
+    if (m === 'visitor') return [];
+    var all = TCL.registry.modules.map(function (x) { return x.id; });
+    if (m === 'open') return all;
+    var t = track();
+    if (t.state === 'missing') return [];
+    if (t.state === 'unknown') return O.get().status === 'loading' || TCL.sync.status().state === 'syncing' ? null : all;
+    var s = scope();
+    return s.core.concat(s.prerequisites, s.other);
+  }
+
+  function missing(list) { return list.filter(function (id) { return !loadedModules[id]; }); }
+
+  function load() {
+    var list = wanted();
+    if (!list || !missing(list).length) return Promise.resolve();
+    if (loading) return loading.then(load);
+    var todo = missing(list), src = KIT.slice();
+    todo.forEach(function (id) { src = src.concat(filesOf(id)); });
+    loading = Promise.all(src.map(loadScript)).then(function () { todo.forEach(function (id) { loadedModules[id] = 1; }); loading = null; }, function (e) { loading = null; throw e; });
     return loading;
   }
 
-  TCL.content = { load: loadCatalogue, ready: function () { return loaded; }, needed: function () { return mode() !== 'visitor'; } };
+  TCL.content = {
+    load: load, filesOf: filesOf,
+    pending: function () { return wanted() === null; },
+    ready: function () { var w = wanted(); return w !== null && !missing(w).length; },
+    needed: function () { return mode() !== 'visitor'; }
+  };
 
   TCL.access = { DEMO: DEMO, mode: mode, track: track, scope: scope, allows: allows, inTrack: inTrack, moduleFilter: moduleFilter, coreIds: coreIds, tag: tag, trackCtx: trackCtx, decide: decide };
 })(window);

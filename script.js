@@ -107,7 +107,9 @@
   }
 
   function showCatalogueLoading(main) {
-    main.innerHTML = '<div class="container page"><p class="loading" role="status"><span class="spinner" aria-hidden="true"></span>Chargement de vos contenus…</p></div>';
+    main.innerHTML = '<div class="container page"><p class="loading" id="track-loading" role="status"><span class="spinner" aria-hidden="true"></span>Chargement de vos contenus…</p></div>';
+
+    if (TCL.content.pending()) return;
 
     TCL.content.load().then(function () {
       render(true);
@@ -215,7 +217,7 @@
 
     var waiting = document.querySelector('#track-loading');
 
-    if (waiting && TCL.access.track().state !== 'unknown') {
+    if (waiting && (TCL.access.track().state !== 'unknown' || !TCL.content.pending())) {
       render(true);
     }
   }

@@ -15,9 +15,11 @@
     var html = '<div class="container page">' + P.crumbs([{ label: 'Mes leçons' }]) +
       P.head('Mes leçons', 'Les leçons sont classées par domaine. Chacune est reliée à sa simulation et à ses exercices corrigés.') + P.trackBanner();
     var visible = TCL.registry.scopedModules();
+    var shownDomain = null;
     TCL.registry.categories.forEach(function (cat) {
       var mods = visible.filter(function (m) { return m.category === cat.id; });
       if (!mods.length) return;
+      if (cat.domain !== shownDomain) { shownDomain = cat.domain; html += '<p class="domain-head">' + esc(TCL.registry.domains.filter(function (d) { return d.id === cat.domain; })[0].title) + '</p>'; }
       html += '<section class="cat" aria-labelledby="cat-' + cat.id + '"><div class="cat__head"><h2 id="cat-' + cat.id + '">' + esc(cat.title) + '</h2><p>' + esc(cat.text) + '</p></div><div class="cards">';
       mods.forEach(function (m) {
         var parts = TCL.registry.liveParts(m);
@@ -112,7 +114,8 @@
       '<div class="overview">' +
       '<div class="overview__main"><section class="box"><h2>Objectifs pédagogiques</h2><p>À la fin de cette leçon, vous serez capable de :</p><ul class="objectives">' +
       lesson.objectives.map(function (o) { return '<li>' + I('check') + '<span>' + esc(o) + '</span></li>'; }).join('') + '</ul>' +
-      '<p class="muted">Prérequis : ' + esc(lesson.prerequisites) + '</p></section>' +
+      '<p class="muted">Prérequis : ' + esc(lesson.prerequisites) + '</p>' +
+      (lesson.sources && lesson.sources.length ? '<details class="sources"><summary>Références consultées</summary><ul>' + lesson.sources.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></details>' : '') + '</section>' +
       '<section><h2 class="h-sub">Chapitres</h2><ol class="chapter-list">' + list + '</ol></section></div>' +
       '<aside class="overview__side"><div class="box box--accent"><p class="box__big">' + nDone + ' / ' + lesson.chapters.length + '</p><p>chapitres lus</p>' +
       U.progressBar(nDone / lesson.chapters.length * 100, 'Chapitres lus') +
