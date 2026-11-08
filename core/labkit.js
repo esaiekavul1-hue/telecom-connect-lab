@@ -87,6 +87,8 @@
 
   /** Liens de fin de page : leçon et défis du module, simulations précédente et suivante (ordre du catalogue). */
   function sequenceLinks(id) {
+    var ex = TCL.registry.extraById(id);
+    if (ex) return nextLinks([{ href: '#/laboratoire/' + ex.parent, label: 'Laboratoire principal du module', icon: 'arrowLeft' }, { href: '#/lecons/' + ex.parent, label: 'Revoir la leçon', icon: 'book', primary: true }]);
     var R = TCL.registry, mods = R.withLab(), i = mods.map(function (m) { return m.id; }).indexOf(id);
     var prev = mods[i - 1], next = mods[i + 1], parts = R.liveParts(R.byId(id)), links = [];
     if (prev) links.push({ href: '#/laboratoire/' + prev.id, label: prev.title, icon: 'arrowLeft' });

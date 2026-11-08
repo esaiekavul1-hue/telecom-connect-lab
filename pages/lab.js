@@ -21,6 +21,7 @@
   function list(main) {
     var st = TCL.store.get();
     var labs = TCL.registry.withLab();
+    labs.slice().forEach(function (m) { TCL.registry.extrasOf(m.id).forEach(function (x) { labs.push({ id: x.id, title: m.title, parts: { lab: true } }); }); });
     var cards = labs.map(function (m) {
       var info = labInfo(m.id), p = TCL.registry.labProgress(st, m.id);
       var opened = !!(st.lab[m.id] && st.lab[m.id].params);
@@ -53,10 +54,11 @@
 
   function lab(main, params) {
     var id = params.lab;
-    var mod = TCL.registry.byId(id);
-    if (!mod || !TCL.registry.liveParts(mod).lab) return TCL.pages.notFound.render(main);
+    var extra = TCL.registry.extraById(id);
+    var mod = TCL.registry.byId(extra ? extra.parent : id);
+    if (!mod || !TCL.labs[id]) return TCL.pages.notFound.render(main);
     var info = labInfo(id);
-    main.innerHTML = '<div class="container page">' + P.crumbs([{ label: 'Mon laboratoire', href: '#/laboratoire' }, { label: info.title }]) + P.moduleNav(id, 'lab') + '<div id="lab-host"></div>' + (TCL.curriculum.competencies[id] ? '<p class="ask-ai"><a href="#/assistant/' + id + '?labo=1">' + I('sparkle') + 'Poser une question sur ce laboratoire</a></p>' : '') + '</div>';
+    main.innerHTML = '<div class="container page">' + P.crumbs([{ label: 'Mon laboratoire', href: '#/laboratoire' }, { label: info.title }]) + P.moduleNav(mod.id, 'lab') + '<div id="lab-host"></div>' + TCL.registry.extrasOf(id).map(function (x) { return '<p class="ask-ai"><a href="#/laboratoire/' + x.id + '">' + I('flask') + 'Laboratoire complémentaire : ' + esc(TCL.labs[x.id].title) + '</a></p>'; }).join('') + (TCL.curriculum.competencies[id] ? '<p class="ask-ai"><a href="#/assistant/' + id + '?labo=1">' + I('sparkle') + 'Poser une question sur ce laboratoire</a></p>' : '') + '</div>';
     return TCL.labs[id].mount(U.qs('#lab-host', main));
   }
 

@@ -87,7 +87,6 @@ Dans cet ordre, sur le projet Supabase existant :
 - Correspondance entre les cours proposés et les référentiels réels.
 
 ### Non encore développé
-- Laboratoires dédiés absents : routage dynamique, oscillateurs, organisation des fichiers.
 - Rôle enseignant : le rôle existe, sans espace dédié.
 - Partenariats et sponsors : aucun mécanisme, aucune publicité.
 

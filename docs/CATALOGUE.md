@@ -6,8 +6,8 @@ Document généré par `node tools/catalogue-report.js` à partir du contenu ré
 |---|---|
 | Modules | 40 |
 | Chapitres de leçon | 149 |
-| Laboratoires interactifs | 40 |
-| Missions de laboratoire | 138 |
+| Laboratoires interactifs | 44 (4 complémentaires) |
+| Missions de laboratoire | 151 |
 | Exercices et défis corrigés | 332 |
 | Évaluations serveur | 48 |
 | Questions d’évaluation | 323 (les tests de positionnement réutilisent des questions de modules) |
@@ -16,12 +16,16 @@ Document généré par `node tools/catalogue-report.js` à partir du contenu ré
 
 ### Préparatoire
 
+5 modules du parcours.
+
 - **Électricité : grandeurs, lois et mesures** : Circuits électriques (5 chapitres)
 - **Découvrir les télécommunications** : Comprendre les signaux (6 chapitres)
 - **Informatique fondamentale** : Représentation des données (3 chapitres) ; Architecture d’un ordinateur (3 chapitres)
 - **Découvrir l’Internet des objets** : Introduction à l’IoT (3 chapitres)
 
 ### Licence 1
+
+11 modules du parcours + 3 bases à consolider venant d’autres niveaux.
 
 - **Électricité générale** : Circuits électriques (5 chapitres) ; Courant alternatif et circuits RLC (4 chapitres) ; Analyse des circuits (3 chapitres)
 - **Électronique analogique** : Diodes et alimentations (4 chapitres)
@@ -33,6 +37,8 @@ Document généré par `node tools/catalogue-report.js` à partir du contenu ré
 
 ### Licence 2
 
+13 modules du parcours + 6 bases à consolider venant d’autres niveaux.
+
 - **Amplification et filtrage** : Transistors et amplification (4 chapitres) ; Amplificateurs opérationnels et filtres (4 chapitres)
 - **Électronique numérique** : Électronique numérique (3 chapitres) ; Conversion analogique-numérique (3 chapitres)
 - **Modulation et transmission** : Modulation et démodulation (6 chapitres) ; Chaîne de transmission (5 chapitres)
@@ -42,6 +48,8 @@ Document généré par `node tools/catalogue-report.js` à partir du contenu ré
 - **Systèmes embarqués communicants** : Communication des objets (3 chapitres)
 
 ### Licence 3
+
+9 modules du parcours + 12 bases à consolider venant d’autres niveaux.
 
 - **Communications numériques** : Transmission numérique et codage (3 chapitres) ; Multiplexage et accès multiple (3 chapitres)
 - **Qualité des transmissions** : Mesures et qualité des transmissions (3 chapitres)
@@ -53,6 +61,8 @@ Document généré par `node tools/catalogue-report.js` à partir du contenu ré
 
 ### Master
 
+6 modules du parcours + 20 bases à consolider venant d’autres niveaux.
+
 - **Réseaux 5G et technologies émergentes** : 4G, 5G et technologies émergentes (3 chapitres)
 - **Télécommunications satellitaires** : Communications satellitaires (3 chapitres)
 - **Radiofréquence et adaptation** : Radiofréquence et adaptation (3 chapitres)
@@ -62,13 +72,15 @@ Document généré par `node tools/catalogue-report.js` à partir du contenu ré
 
 ### Monde professionnel
 
-- **Technicien réseaux** : Réseaux IP (6 chapitres) ; Réseaux et client-serveur (3 chapitres) ; Réseaux sans fil (3 chapitres)
-- **Technicien fibre optique** : Fibre optique (5 chapitres) ; Mesures et qualité des transmissions (3 chapitres)
-- **Administrateur systèmes et réseaux** : Systèmes d’exploitation et fichiers (3 chapitres) ; Réseaux et client-serveur (3 chapitres) ; Virtualisation et cloud (3 chapitres) ; Diagnostic et maintenance informatique (3 chapitres)
-- **Technicien télécom** : Antennes (6 chapitres) ; Notions de propagation radio (6 chapitres) ; Réseaux mobiles (5 chapitres) ; Mesures et qualité des transmissions (3 chapitres) ; Dimensionnement et maintenance (3 chapitres)
-- **Maintenance électronique** : Circuits électriques (5 chapitres) ; Diodes et alimentations (4 chapitres) ; Transistors et amplification (4 chapitres) ; Mesures et dépannage électronique (3 chapitres)
-- **Technicien de maintenance informatique** : Architecture d’un ordinateur (3 chapitres) ; Systèmes d’exploitation et fichiers (3 chapitres) ; Diagnostic et maintenance informatique (3 chapitres)
-- **IoT et automatisation** : Capteurs, actionneurs et mesures (3 chapitres) ; Communication des objets (3 chapitres) ; MQTT, passerelles et supervision (3 chapitres) ; Énergie, fiabilité et sécurité (3 chapitres) ; Projets IoT intégrés (3 chapitres)
+Ensemble des métiers : 22 modules. Chaque métier est compté ci-dessous.
+
+- **Technicien réseaux** : Réseaux IP (6 chapitres) ; Réseaux et client-serveur (3 chapitres) ; Réseaux sans fil (3 chapitres) — 3 modules + 3 bases
+- **Technicien fibre optique** : Fibre optique (5 chapitres) ; Mesures et qualité des transmissions (3 chapitres) — 2 modules + 3 bases
+- **Administrateur systèmes et réseaux** : Systèmes d’exploitation et fichiers (3 chapitres) ; Réseaux et client-serveur (3 chapitres) ; Virtualisation et cloud (3 chapitres) ; Diagnostic et maintenance informatique (3 chapitres) — 4 modules + 3 bases
+- **Technicien télécom** : Antennes (6 chapitres) ; Notions de propagation radio (6 chapitres) ; Réseaux mobiles (5 chapitres) ; Mesures et qualité des transmissions (3 chapitres) ; Dimensionnement et maintenance (3 chapitres) — 5 modules + 4 bases
+- **Maintenance électronique** : Circuits électriques (5 chapitres) ; Diodes et alimentations (4 chapitres) ; Transistors et amplification (4 chapitres) ; Mesures et dépannage électronique (3 chapitres) — 4 modules + 1 bases
+- **Technicien de maintenance informatique** : Architecture d’un ordinateur (3 chapitres) ; Systèmes d’exploitation et fichiers (3 chapitres) ; Diagnostic et maintenance informatique (3 chapitres) — 3 modules + 1 bases
+- **IoT et automatisation** : Capteurs, actionneurs et mesures (3 chapitres) ; Communication des objets (3 chapitres) ; MQTT, passerelles et supervision (3 chapitres) ; Énergie, fiabilité et sécurité (3 chapitres) ; Projets IoT intégrés (3 chapitres) — 5 modules + 2 bases
 
 ## Modules, leçons et laboratoires par domaine
 
@@ -77,7 +89,7 @@ Document généré par `node tools/catalogue-report.js` à partir du contenu ré
 #### Comprendre les signaux (module V1 conservé)
 
 - Chapitres : Qu’est-ce qu’un signal ? ; Le modèle du signal sinusoïdal ; L’amplitude ; Fréquence et période ; La phase ; Lire un graphique et synthèse.
-- Laboratoire : undefined. Missions : Obtenir une période de 4 ms ; Obtenir 6 V crête à crête ; Avancer le signal d’un quart de période.
+- Laboratoire : Signal sinusoïdal. Missions : Obtenir une période de 4 ms ; Obtenir 6 V crête à crête ; Avancer le signal d’un quart de période.
 - Exercices : 10. Évaluation : 6 questions à variantes, corrigées par le serveur.
 
 #### Signaux et systèmes
@@ -319,6 +331,13 @@ Document généré par `node tools/catalogue-report.js` à partir du contenu ré
 - Chapitres : Concevoir un système complet ; Régulation ; Vérifier et documenter.
 - Laboratoire : Serre connectée simulée. Missions : Tenir la plage ; Préserver le ventilateur ; Le bruit perturbe le seuil.
 - Exercices : 8. Évaluation : 6 questions à variantes, corrigées par le serveur.
+
+## Laboratoires complémentaires
+
+- Oscillateur à pont de Wien (module Amplificateurs opérationnels et filtres). Missions : Viser 1 kHz ; Entretenir l’oscillation ; Observer la saturation.
+- Multimètre interactif (module Mesures et dépannage électronique). Missions : Mesurer une tension ; Mesurer un courant ; Mesurer R₁ correctement ; Reconnaître l’erreur dangereuse.
+- Organisation des fichiers sur un disque (module Systèmes d’exploitation et fichiers). Missions : Peupler le disque ; Être bloqué par la fragmentation ; Répartir un fichier.
+- Routage dynamique à vecteur de distance (module Réseaux IP). Missions : Faire converger le réseau ; Rerouter après une panne ; Comptage à l’infini.
 
 ## Évaluations de positionnement
 

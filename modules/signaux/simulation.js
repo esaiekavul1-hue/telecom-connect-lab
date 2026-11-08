@@ -423,5 +423,5 @@
   }
 
   TCL.labs = TCL.labs || {};
-  TCL.labs.signaux = { mount: mount, missions: missions, DEFAULTS: DEFAULTS, LIMITS: LIMITS, explain: explain, sliderToF: sliderToF, fToSlider: fToSlider };
+  TCL.labs.signaux = { id: 'signaux', title: 'Signal sinusoïdal', short: 'Comprendre les signaux', mount: mount, missions: missions, DEFAULTS: DEFAULTS, LIMITS: LIMITS, explain: explain, sliderToF: sliderToF, fToSlider: fToSlider };
 })(window);

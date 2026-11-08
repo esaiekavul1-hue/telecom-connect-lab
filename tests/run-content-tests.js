@@ -58,7 +58,7 @@ function runState(lab, s, where) {
 ids.forEach(function (id) {
   var api = mods[id], L = api.lesson, lab = api.lab, X = api.exercises;
 
-  test(id + ' : leçon complète', function () {
+  if (L) test(id + ' : leçon complète', function () {
     assert.strictEqual(L.id, id);
     assert.ok(L.title && L.intro && L.prerequisites, 'titre, introduction, prérequis');
     assert.ok(L.objectives.length >= 3, 'objectifs');
@@ -86,7 +86,7 @@ ids.forEach(function (id) {
     });
   });
 
-  test(id + ' : exercices corrigés', function () {
+  if (X) test(id + ' : exercices corrigés', function () {
     assert.strictEqual(X.module, id);
     assert.ok(X.count >= 6, 'au moins 6 exercices');
     X.list.forEach(function (e) {
@@ -170,7 +170,7 @@ ids.forEach(function (id) {
 console.log('\nRéférentiel');
 test('chaque module du référentiel existe (V1 ou déclaratif)', function () {
   Object.keys(CUR.competencies).forEach(function (id) { assert.ok(fs.existsSync(path.join(ROOT, id)), 'dossier manquant : ' + id); });
-  ids.filter(function (i) { return i !== 'decouverte'; }).forEach(function (id) { assert.ok(CUR.competencies[id], 'compétence manquante : ' + id); });
+  ids.filter(function (i) { return mods[i].lesson; }).forEach(function (id) { assert.ok(CUR.competencies[id], 'compétence manquante : ' + id); });
 });
 test('chaque compétence est enseignée dans au moins un parcours', function () {
   var used = {};

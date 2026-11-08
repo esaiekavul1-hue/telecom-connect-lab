@@ -30,13 +30,13 @@ Le détail complet est dans [CATALOGUE.md](CATALOGUE.md), généré à partir du
 | Licence 2 | 7 | 13 modules, dont transistors, aop, logique, can, reseaux-info, iot-com |
 | Licence 3 | 7 | 9 modules, dont numerique, multiplexage, qualite, sans-fil, donnees, iot-mqtt, iot-projets |
 | Master | 6 | 5g, satellite, rf, ingenierie, cloud, iot-projets |
-| Monde professionnel | 7 métiers | 22 modules orientés installation, diagnostic et maintenance |
+| Monde professionnel | 7 métiers | 22 modules au total, de 2 à 5 par métier, orientés installation, diagnostic et maintenance |
 
 Total : 40 modules, 149 chapitres. Chaque nouvelle leçon comporte objectifs, prérequis, définitions, formules avec unités et conditions, schéma ou graphique, exemples résolus, applications, erreurs fréquentes, résumé et passage au laboratoire.
 
 ## 3. Laboratoires fonctionnels
 
-40 laboratoires et 138 missions, listés dans [CATALOGUE.md](CATALOGUE.md). Chacun recalcule ses résultats à partir d'un modèle explicite, indique ses limites et se réinitialise.
+44 laboratoires, dont 4 complémentaires (oscillateurs, multimètre, organisation des fichiers, routage dynamique), et 151 missions, listés dans [CATALOGUE.md](CATALOGUE.md). Chacun recalcule ses résultats à partir d'un modèle explicite, indique ses limites et se réinitialise.
 
 Parmi les nouveautés : RLC et résonance, Thévenin, redresseur simulé dans le temps, polarisation et écrêtage d'un transistor, AOP réel et filtres, portes et compteur, repliement et quantification, oscilloscope virtuel avec localisation de panne, ligne et ROS, BER et Hamming, ALOHA et CDMA, cascade de bruit et œil, orbite et bilan, débit 3GPP et faisceau, plan Wi-Fi, Erlang, bits, mini-processeur pas à pas, ordonnanceur, diagnostic client-serveur, requêtes et transactions, consolidation, RAID, microcontrôleur simulé, capteur de température, LoRa, courtier MQTT simulé, autonomie, serre régulée sur 24 h.
 
@@ -88,7 +88,7 @@ Défauts trouvés et corrigés pendant cette mission : blocage au rechargement d
 
 1. `npm run dev`, puis ouvrir http://localhost:8080. Le code de connexion s'affiche dans le terminal, et les données s'effacent à l'arrêt.
 2. Sans compte : consulter l'accueil, ses quatre domaines et la présentation de l'assistant.
-3. Créer un compte, choisir Licence 1, ouvrir Mes leçons puis Mon laboratoire : 14 modules apparaissent.
+3. Créer un compte, choisir Licence 1, ouvrir Mes leçons : 14 modules apparaissent (11 du parcours et 3 bases à consolider).
 4. Essayer `#/laboratoire/iot-mqtt` : hors parcours. Avec un compte Master, essayer `#/laboratoire/5g`.
 5. Exemples à manipuler : `#/laboratoire/logique`, `#/laboratoire/ordinateur`, `#/laboratoire/diodes`.
 6. `admin@local.test` ouvre l'administration.
@@ -114,7 +114,6 @@ feat: socle du catalogue et domaine électronique
 
 - Relecture scientifique par un enseignant : aucune à ce jour, pour aucun module.
 - Profondeur : les nouvelles leçons ont 3 à 4 chapitres, contre 5 à 6 en V1. Elles couvrent l'essentiel de chaque sujet, sans remplacer un cours universitaire complet. Le Master propose un module par cours.
-- Laboratoires dédiés absents : routage dynamique, oscillateurs (leçon seulement), organisation des fichiers (leçon seulement), multimètre interactif (calcul d'incertitude seulement).
 - Évaluations pratiques notées par le serveur : non développées.
 - 4G : traitée par ses principes partagés avec la 5G, sans module dédié. Les paramètres LTE ne sont pas confirmés par une source lue.
 - Assistant IA : interface et contexte prêts, activation à réaliser dans une phase distincte.

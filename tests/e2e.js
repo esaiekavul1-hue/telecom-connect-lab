@@ -391,7 +391,7 @@ async function suiteC(browser) {
   var errors = []; watch(page, errors);
 
   await go(page, 'laboratoire');
-  ok('C1 « Mon laboratoire » : 40 simulations disponibles, aucune en préparation', (await page.$$('.lab-card')).length === 40 && (await page.$$('.soon .badge--soon')).length === 0 && !/en préparation/i.test(await text(page, 'main')));
+  ok('C1 « Mon laboratoire » : 44 simulations disponibles, aucune en préparation', (await page.$$('.lab-card')).length === 44 && (await page.$$('.soon .badge--soon')).length === 0 && !/en préparation/i.test(await text(page, 'main')));
   await go(page, 'laboratoire/satellites');
   ok('C2 une simulation inexistante n’est pas accessible (page « n’existe pas »)', /n’existe pas/.test(await text(page, 'h1')));
 

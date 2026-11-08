@@ -80,7 +80,8 @@
     if (a.mode() !== 'student') return '';
     if (t.state === 'unknown') return '<div class="callout callout--warn">' + I('device') + '<p>Votre parcours n’a pas pu être chargé : tous les contenus sont affichés pour le moment.</p></div>';
     if (t.state !== 'set') return '';
-    return '<p class="track-line">' + I('route') + '<span>Contenus du parcours <strong>' + esc(t.label) + '</strong></span> <a href="#/parcours">Voir mon parcours</a></p>';
+    var sc = a.scope();
+    return '<p class="track-line">' + I('route') + '<span>Contenus du parcours <strong>' + esc(t.label) + '</strong> : ' + sc.core.length + ' module' + (sc.core.length > 1 ? 's' : '') + (sc.prerequisites.length ? ' + ' + sc.prerequisites.length + ' base' + (sc.prerequisites.length > 1 ? 's' : '') + ' à consolider' : '') + '</span> <a href="#/parcours">Voir mon parcours</a></p>';
   };
 
   /** Cours du parcours dont le contenu n'existe pas encore. */

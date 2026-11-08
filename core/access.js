@@ -92,7 +92,8 @@
 
   /** Décision de navigation : { redirect } , { page, params } ou null (page demandée). */
   function decide(r) {
-    var m = mode(), page = r.route.page, id = moduleOf(r);
+    var m = mode(), page = r.route.page, id = moduleOf(r), extra = TCL.registry.extraById(id);
+    if (extra && m !== 'visitor') id = extra.parent;
 
     if (m === 'visitor') {
       if (PUBLIC_PAGES[page]) return { page: PUBLIC_PAGES[page] };
@@ -141,7 +142,8 @@
 
   function filesOf(id) {
     var f = V1_FILES[id];
-    return f ? f.map(function (n) { return 'modules/' + id + '/' + n + '.js'; }) : ['modules/' + id + '/' + id + '.js'];
+    var main = f ? f.map(function (n) { return 'modules/' + id + '/' + n + '.js'; }) : ['modules/' + id + '/' + id + '.js'];
+    return main.concat(TCL.registry.extrasOf(id).map(function (x) { return 'modules/' + x.id + '/' + x.id + '.js'; }));
   }
 
   function loadScript(src) {

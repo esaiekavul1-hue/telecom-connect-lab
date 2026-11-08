@@ -99,6 +99,10 @@ Un calculateur tiers vu en recherche annonçait 2 793,472 ms pour 59 octets en S
 
 Les 10 modules V1 n'ont pas été revérifiés ici, sauf par leurs tests existants.
 
+## Laboratoires complémentaires
+
+Oscillateur de Wien : formules déjà sourcées. Multimètre : valeurs calculées, précision d'exemple. Organisation des fichiers : principe de l'inode (OSTEP). Routage à vecteur de distance : statut R, comparé par test aux plus courts chemins (C).
+
 ## Réserves
 
 - Wikipédia sert de contrôle de formule, non d'autorité. Les fiches techniques et normes priment.

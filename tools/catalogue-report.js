@@ -22,7 +22,7 @@ var T = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=
   await p.waitForFunction(function () { return window.TCL && TCL.content && TCL.content.ready(); }, null, { timeout: 30000 });
   var data = await p.evaluate(function () {
     var R = TCL.registry;
-    return { domains: R.domains, categories: R.categories, modules: R.modules.map(function (m) { return { id: m.id, category: m.category, title: m.title, chapters: TCL.lessons[m.id].chapters.map(function (x) { return x.title; }), lab: TCL.labs[m.id].title, missions: TCL.labs[m.id].missions.map(function (x) { return x.title; }), ex: TCL.exercises[m.id].count, declarative: !!TCL.labs[m.id].def }; }) };
+    return { domains: R.domains, categories: R.categories, modules: R.modules.map(function (m) { return { id: m.id, category: m.category, title: m.title, chapters: TCL.lessons[m.id].chapters.map(function (x) { return x.title; }), lab: TCL.labs[m.id].title, missions: TCL.labs[m.id].missions.map(function (x) { return x.title; }), ex: TCL.exercises[m.id].count, declarative: !!TCL.labs[m.id].def }; }), extras: R.extraLabs.map(function (x) { return { title: TCL.labs[x.id].title, parent: R.byId(x.parent).title, missions: TCL.labs[x.id].missions.map(function (y) { return y.title; }) }; }) };
   });
   await b.close(); site.close();
 
@@ -30,11 +30,13 @@ var T = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=
   var assess = gen.assessments(), L = [];
   var sum = function (f) { return data.modules.reduce(function (n, m) { return n + f(m); }, 0); };
   L.push('# Catalogue pédagogique — TELECOM CONNECT LAB 2.0', '', 'Document généré par `node tools/catalogue-report.js` à partir du contenu réellement chargé.', '');
-  L.push('| Élément | Nombre |', '|---|---|', '| Modules | ' + data.modules.length + ' |', '| Chapitres de leçon | ' + sum(function (m) { return m.chapters.length; }) + ' |', '| Laboratoires interactifs | ' + data.modules.length + ' |', '| Missions de laboratoire | ' + sum(function (m) { return m.missions.length; }) + ' |', '| Exercices et défis corrigés | ' + sum(function (m) { return m.ex; }) + ' |', '| Évaluations serveur | ' + assess.length + ' |', '| Questions d’évaluation | ' + assess.reduce(function (n, a) { return n + a.questions.length; }, 0) + ' (les tests de positionnement réutilisent des questions de modules) |', '');
+  L.push('| Élément | Nombre |', '|---|---|', '| Modules | ' + data.modules.length + ' |', '| Chapitres de leçon | ' + sum(function (m) { return m.chapters.length; }) + ' |', '| Laboratoires interactifs | ' + (data.modules.length + data.extras.length) + ' (' + data.extras.length + ' complémentaires) |', '| Missions de laboratoire | ' + (sum(function (m) { return m.missions.length; }) + data.extras.reduce(function (n, x) { return n + x.missions.length; }, 0)) + ' |', '| Exercices et défis corrigés | ' + sum(function (m) { return m.ex; }) + ' |', '| Évaluations serveur | ' + assess.length + ' |', '| Questions d’évaluation | ' + assess.reduce(function (n, a) { return n + a.questions.length; }, 0) + ' (les tests de positionnement réutilisent des questions de modules) |', '');
   L.push('## Leçons par parcours', '');
   cur.spaces.forEach(function (s) {
     L.push('### ' + s.title, '');
-    s.courses.forEach(function (co) { L.push('- **' + co.title + '** : ' + co.modules.map(function (m) { return by[m].title + ' (' + by[m].chapters.length + ' chapitres)'; }).join(' ; ')); });
+    var tm = cur.trackModules(s.id, null);
+    L.push(s.id === 'pro' ? 'Ensemble des métiers : ' + tm.core.length + ' modules. Chaque métier est compté ci-dessous.' : tm.core.length + ' modules du parcours' + (tm.prerequisites.length ? ' + ' + tm.prerequisites.length + ' bases à consolider venant d’autres niveaux.' : '.'), '');
+    s.courses.forEach(function (co) { L.push('- **' + co.title + '** : ' + co.modules.map(function (m) { return by[m].title + ' (' + by[m].chapters.length + ' chapitres)'; }).join(' ; ') + (s.id === 'pro' ? ' — ' + cur.trackModules('pro', co.id).core.length + ' modules + ' + cur.trackModules('pro', co.id).prerequisites.length + ' bases' : '')); });
     L.push('');
   });
   L.push('## Modules, leçons et laboratoires par domaine', '');
@@ -46,7 +48,9 @@ var T = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=
       });
     });
   });
-  L.push('## Évaluations de positionnement', '');
+  L.push('## Laboratoires complémentaires', '');
+  data.extras.forEach(function (x) { L.push('- ' + x.title + ' (module ' + x.parent + '). Missions : ' + x.missions.join(' ; ') + '.'); });
+  L.push('', '## Évaluations de positionnement', '');
   cur.placements.forEach(function (x) { L.push('- ' + x.title + ' : ' + x.grants.map(function (g) { return cur.competencies[g].title; }).join(', ') + '.'); });
   L.push('');
   fs.writeFileSync(path.join(ROOT, 'docs', 'CATALOGUE.md'), L.join('\n'));

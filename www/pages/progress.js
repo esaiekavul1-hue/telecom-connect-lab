@@ -123,7 +123,7 @@
 
     main.innerHTML = '<div class="container page">' + head +
       '<section class="kpis" aria-label="Résumé">' +
-      '<div class="kpi kpi--main"><p class="kpi__label">Progression générale (' + all.modules + ' modules)</p><p class="kpi__value">' + all.percent + ' %</p>' + U.progressBar(all.percent, 'Progression générale') + '<p class="kpi__hint">' + all.done + ' activités terminées sur ' + all.total + '</p></div>' +
+      '<div class="kpi kpi--main"><p class="kpi__label">' + (TCL.access.scope() ? 'Progression du parcours' : 'Progression générale') + ' (' + all.modules + ' modules)</p><p class="kpi__value">' + all.percent + ' %</p>' + U.progressBar(all.percent, 'Progression générale') + '<p class="kpi__hint">' + all.done + ' activités terminées sur ' + all.total + '</p></div>' +
       '<div class="kpi"><p class="kpi__label">Chapitres lus</p><p class="kpi__value">' + all.chaptersDone + '<small> / ' + all.chaptersTotal + '</small></p><p class="kpi__hint">' + all.lessonsComplete + ' leçon' + (all.lessonsComplete > 1 ? 's' : '') + ' terminée' + (all.lessonsComplete > 1 ? 's' : '') + '</p></div>' +
       '<div class="kpi"><p class="kpi__label">Exercices effectués</p><p class="kpi__value">' + all.exAttempted + '<small> / ' + all.exTotal + '</small></p><p class="kpi__hint">' + all.exMastered + ' réussi' + (all.exMastered > 1 ? 's' : '') + ' au moins une fois</p></div>' +
       '<div class="kpi"><p class="kpi__label">Missions du laboratoire</p><p class="kpi__value">' + all.missionsDone + '<small> / ' + all.missionsTotal + '</small></p><p class="kpi__hint">réussies</p></div>' +

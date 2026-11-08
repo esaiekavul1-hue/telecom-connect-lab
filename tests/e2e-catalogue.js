@@ -63,6 +63,18 @@ async function suiteA(browser) {
     await harvest();
   }
   ok('laboratoires : affichage, missions, commandes et réinitialisation', labBad.length === 0, labBad.join(' | '));
+  var extraBad = [];
+  for (var xid of ['oscillateurs', 'multimetre', 'fichiers', 'routage']) {
+    await open(page, 'laboratoire/' + xid);
+    var en = (await page.$$('.mission')).length;
+    for (var eb of await page.$$('.mission__check')) await eb.click();
+    if (en < 3 || (await page.$$('.module-nav a')).length !== 5 || /undefined|NaN/.test(await page.textContent('main'))) extraBad.push(xid);
+    await harvest();
+  }
+  ok('laboratoires complémentaires ouverts et rattachés à leur module', extraBad.length === 0, extraBad.join(','));
+  await open(page, 'laboratoire');
+  ok('liste : 44 laboratoires, sans valeur indéfinie', (await page.$$('.lab-card')).length === 44 && !/undefined/.test(await page.textContent('main')));
+  ok('signaux : titre défini', await page.evaluate(function () { return TCL.labs.signaux.title === 'Signal sinusoïdal'; }));
 
   var exBad = [];
   for (var x of mods) {

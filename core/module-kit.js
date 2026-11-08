@@ -79,7 +79,10 @@
     TCL.labs[id] = TCL.labEngine.build(api.lab);
   }
 
+  /** Laboratoire complémentaire rattaché à un module existant (registry.extraLabs). */
+  function registerLab(api) { var TCL = root.TCL; TCL.labs = TCL.labs || {}; TCL.labs[api.lab.id] = TCL.labEngine.build(api.lab); }
+
   return { M: M, EX: EX, S: S, fN: fN, si: si, v: v, log10: log10, clamp: clamp, rng: rng, gaussian: gaussian, erfc: erfc, qf: qf, fromDb: fromDb, toDb: toDb,
     formula: formula, defs: defs, example: example, apply: apply, pitfalls: pitfalls, summary: summary, toLab: toLab, table: table, lesson: lesson,
-    num: num, pick: pick, text: text, series: EX.series, register: register };
+    num: num, pick: pick, text: text, series: EX.series, register: register, registerLab: registerLab };
 });

@@ -166,7 +166,7 @@ function rpcResult(p, name, args) { return p.evaluate(function (a) { return TCL.
   ok('Leçons : aucun cours vide annoncé dans le parcours', (await p.$$('.soon')).length === 0 && !/En cours de développement/.test(await text(p, 'main')));
   await shot(p, '07-lecons-l1');
   await go(p, 'laboratoire');
-  ok('Laboratoires : uniquement ceux de L1', (await p.$$('.lab-card')).length === 14);
+  ok('Laboratoires : uniquement ceux de L1', (await p.$$('.lab-card')).length === 17);
   await go(p, 'defis');
   ok('Défis : uniquement ceux de L1', (await p.$$('.card[data-module]')).length === 14);
   await go(p, 'evaluations');

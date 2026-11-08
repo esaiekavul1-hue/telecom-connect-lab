@@ -88,6 +88,16 @@
     mod('iot-projets', 'iot-systemes', 'sparkle', 'Projets IoT intégrés', 'Régulation, actionneurs, supervision : un système complet.')
   ];
 
+  /* Laboratoires complémentaires : accessibles avec leur module parent, hors calcul de progression. */
+  var extraLabs = [
+    { id: 'oscillateurs', parent: 'aop' },
+    { id: 'multimetre', parent: 'mesures' },
+    { id: 'fichiers', parent: 'systemes' },
+    { id: 'routage', parent: 'ip' }
+  ];
+  function extraById(id) { return extraLabs.filter(function (x) { return x.id === id; })[0] || null; }
+  function extrasOf(parent) { return extraLabs.filter(function (x) { return x.parent === parent; }); }
+
   /** Parties RÉELLEMENT disponibles : déclarées ET chargées. */
   function liveParts(m) {
     return {
@@ -177,6 +187,9 @@
 
   TCL.registry = {
     domains: domains,
+    extraLabs: extraLabs,
+    extraById: extraById,
+    extrasOf: extrasOf,
     categories: categories,
     modules: modules,
     byId: byId,
