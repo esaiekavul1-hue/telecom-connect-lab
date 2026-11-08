@@ -41,7 +41,7 @@
   var math = { gain: gain, bandwidth: bandwidth, fullPower: fullPower, lp1: lp1, sallenKey: sallenKey, lp2: lp2, wien: wien, waveform: waveform };
 
   function invSvg(dark, label) {
-    return S.svg(520, 190, label || 'Montage inverseur : Rg vers l’entrée moins, Rf de la sortie vers l’entrée moins, entrée plus à la masse.', S.wire('M50 80H110M170 80H230M210 80V30H290M350 30H400V100M400 100H440M230 104H210V140') + S.R(140, 80, false, 'Rg') + S.R(320, 30, false, 'Rf') + S.opamp(270, 92) + S.wire('M310 92H400') + S.gnd(210, 140) + S.node(210, 80) + S.node(400, 92) + S.text(40, 85, 've', { a: 'end' }) + S.text(448, 104, 'vs', { a: 'start' }), dark);
+    return S.svg(520, 190, label || 'Montage inverseur : Rg vers l’entrée moins, Rf de la sortie vers l’entrée moins, entrée plus à la masse.', S.wire('M50 80H110M170 80H230M210 80V30H290M350 30H400V92M400 92H440M230 104H210V140') + S.R(140, 80, false, 'Rg') + S.R(320, 30, false, 'Rf') + S.opamp(270, 92) + S.wire('M310 92H400') + S.gnd(210, 140) + S.node(210, 80) + S.node(400, 92) + S.text(40, 85, 've', { a: 'end' }) + S.text(448, 97, 'vs', { a: 'start' }), dark);
   }
   var lesson = K.lesson({ id: 'aop', title: 'Amplificateurs opérationnels et filtres',
     intro: 'L’amplificateur opérationnel permet de construire amplificateurs, filtres et oscillateurs avec quelques résistances et condensateurs. Son gain réel ne dépend alors presque plus du composant.',

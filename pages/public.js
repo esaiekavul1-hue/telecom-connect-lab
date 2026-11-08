@@ -37,7 +37,7 @@
       '<h1 class="hero__title" tabindex="-1">TELECOM CONNECT LAB</h1>',
       '<p class="hero__slogan">Apprendre · Simuler · Pratiquer · Innover</p>',
       '<p class="hero__sign">Du réel au virtuel. De la théorie à la pratique.</p>',
-      '<p class="hero__desc">La plateforme pour apprendre les télécommunications en manipulant : des leçons claires, des laboratoires virtuels calculés et des exercices corrigés, pensés pour les réalités des étudiants et des techniciens en RDC.</p>',
+      '<p class="hero__desc">Apprenez les télécommunications, l’électronique, l’informatique et l’Internet des objets en manipulant : des leçons claires, des laboratoires virtuels calculés et des exercices corrigés, pour les étudiants et les professionnels.</p>',
       '<div class="hero__actions"><a class="btn btn--primary btn--lg" href="#/lecons/decouverte">' + I('sparkle') + 'Découvrir</a>',
       '<a class="btn btn--on-dark btn--lg" href="#/inscription">' + I('user') + 'Créer un compte</a>',
       '<a class="btn btn--on-dark btn--lg" href="#/connexion">' + I('login') + 'Se connecter</a></div>',
@@ -50,6 +50,13 @@
       why('shield', 'Progresser', 'Les exercices sont corrigés immédiatement, et les évaluations du compte sont corrigées par le serveur.'),
       '</div></div></section>',
 
+      '<section class="section"><div class="container why"><div class="section-head"><h2>Quatre domaines</h2><p>Un même environnement pour comprendre, simuler et s’exercer.</p></div><div class="why__grid why__grid--4">',
+      why('antenna', 'Télécommunications', 'Signaux, modulation, antennes, fibre, réseaux mobiles, 5G, satellites et dimensionnement.'),
+      why('circuit', 'Électricité et électronique', 'Circuits, diodes, transistors, amplificateurs, logique, conversion et dépannage.'),
+      why('device', 'Informatique fondamentale', 'Données binaires, architecture, systèmes, réseaux, bases de données et cloud.'),
+      why('network', 'Internet des objets', 'Capteurs, microcontrôleurs, LoRa, MQTT, énergie, sécurité et projets intégrés.'),
+      '</div></div></section>',
+
       '<section class="section section--tint"><div class="container"><div class="section-head"><h2>Six parcours</h2><p>À la création de votre compte, vous choisissez votre parcours. Votre espace s’adapte ensuite à votre niveau.</p></div>',
       '<div class="cards cards--spaces">' + trackCards() + '</div>',
       '<p class="muted note">Structure pédagogique proposée, qui ne constitue pas un programme universitaire officiel. Les cours encore en développement sont indiqués comme tels.</p></div></section>',
@@ -60,6 +67,8 @@
       tryCard('target', 'Un mini-défi', 'Trois questions, corrigées et expliquées immédiatement.', '#/defis/decouverte', 'Relever le défi'),
       tryCard('chart', 'Le suivi', 'Voyez comment la plateforme suit votre progression.', '#/progression', 'Voir l’aperçu'),
       '</ol></div></section>',
+
+      '<section class="section"><div class="container"><div class="ai-band">' + I('sparkle') + '<div><h2>Assistant pédagogique</h2><p>Un assistant fondé sur l’intelligence artificielle est prévu pour expliquer une notion, reformuler un passage, donner un indice sans livrer la solution, éclairer une erreur et proposer des exercices adaptés à votre parcours.</p><p class="muted">Son activation est en préparation : il n’est pas encore en service. Un compte est nécessaire pour l’utiliser, et il sera désactivé pendant les évaluations.</p></div></div></div></section>',
 
       '<section class="section section--tint"><div class="container why"><div class="section-head"><h2>Conçue pour vos conditions réelles</h2></div><div class="why__grid">',
       why('device', 'Légère sur téléphone', 'Une application adaptée aux téléphones Android modestes et à la consommation de données.'),

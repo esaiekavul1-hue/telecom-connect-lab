@@ -257,3 +257,12 @@
 .sim-cell.is-on { border-color: #0B7F99; box-shadow: inset 0 0 0 2px #0B7F99; }
 .thumb-icon { display: grid; place-items: center; min-height: 160px; color: var(--cyan-400); }
 .thumb-icon .icon { width: 64px; height: 64px; }
+
+.why__grid--4 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.ai-band { display: flex; gap: 18px; align-items: flex-start; padding: 22px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); }
+.ai-band > .icon { flex: 0 0 auto; width: 32px; height: 32px; color: #0B7F99; }
+.ai-band h2 { margin-top: 0; }
+.ask-ai { margin: 12px 0 0; font-size: 15px; }
+.ask-ai a { display: inline-flex; gap: 6px; align-items: center; }
+.scope__trace--thin { fill: none; stroke: var(--cyan-400); stroke-width: 1; opacity: .55; }
+.lab__controls .controls:empty { display: none; }

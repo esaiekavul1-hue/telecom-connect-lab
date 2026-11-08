@@ -151,6 +151,7 @@
       '<h1 tabindex="-1">' + esc(ch.title) + '</h1>' + ch.html +
       '<footer class="lesson__foot">' +
       '<div class="lesson__done" id="done-zone"></div>' +
+      (TCL.curriculum.competencies[mid] ? '<p class="ask-ai"><a href="#/assistant/' + mid + '?chapitre=' + cid + '">' + I('sparkle') + 'Poser une question sur ce chapitre</a></p>' : '') +
       '<nav class="pager" aria-label="Chapitres">' +
       (prev ? '<a class="btn btn--ghost" href="#/lecons/' + mid + '/' + prev.id + '">' + I('arrowLeft') + 'Chapitre précédent</a>' : '<span></span>') +
       (next ? '<a class="btn btn--ghost" href="#/lecons/' + mid + '/' + next.id + '">Chapitre suivant' + I('arrowRight') + '</a>' : '<a class="btn btn--ghost" href="' + after[0] + '">' + after[1] + I('arrowRight') + '</a>') +

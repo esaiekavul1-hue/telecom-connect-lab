@@ -31,7 +31,7 @@
     objectives: ['Décrire la séquence de démarrage.', 'Appliquer une méthode de diagnostic.', 'Comparer les niveaux de RAID.', 'Appliquer la règle de sauvegarde 3-2-1.'],
     prerequisites: 'Systèmes d’exploitation.',
     sources: ['OSTEP, chapitre RAID.', 'CISA, Data Backup Options (règle 3-2-1).', 'Page « Power-on self-test ».'],
-    figures: { boot: { caption: 'Séquence de démarrage d’un ordinateur.', svg: function () { return S.blocks({ w: 520, h: 110, label: 'Alimentation, POST, chargeur, système.', boxes: [{ id: 'a', x: 15, y: 30, w: 110, h: 50, t: 'Alimentation' }, { id: 'b', x: 140, y: 30, w: 110, h: 50, t: 'POST' }, { id: 'c', x: 265, y: 30, w: 110, h: 50, t: 'Chargeur' }, { id: 'd', x: 390, y: 30, w: 115, h: 50, t: 'Système' }], links: [{ a: 'a', b: 'b' }, { a: 'b', b: 'c' }, { a: 'c', b: 'd' }] }); } } },
+    figures: { boot: { caption: 'Séquence de démarrage d’un ordinateur.', svg: function () { return S.blocks({ w: 520, h: 110, label: 'Alimentation, POST, chargeur, système.', boxes: [{ id: 'a', x: 15, y: 30, w: 100, h: 50, t: 'Alimentation' }, { id: 'b', x: 145, y: 30, w: 100, h: 50, t: 'POST' }, { id: 'c', x: 275, y: 30, w: 100, h: 50, t: 'Chargeur' }, { id: 'd', x: 405, y: 30, w: 100, h: 50, t: 'Système' }], links: [{ a: 'a', b: 'b' }, { a: 'b', b: 'c' }, { a: 'c', b: 'd' }] }); } } },
     chapters: [
       { title: 'Démarrage et méthode', summary: 'POST, méthode de dépannage.', html: [
         '<p class="lead">Chaque étape du démarrage indique où chercher une panne.</p>',

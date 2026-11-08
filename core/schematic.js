@@ -42,6 +42,10 @@
     return terminals(x, y, v, 16) + '<circle class="sk__p" cx="' + x + '" cy="' + y + '" r="16"/>' +
       (ac ? '<path class="sk__w" d="M' + (x - 9) + ' ' + y + 'q4.5 -11 9 0t9 0"/>' : (v ? text(x, y - 3, '+', { cls: 'sk__s' }) + text(x, y + 11, '−', { cls: 'sk__s' }) : text(x + 7, y + 4, '+', { cls: 'sk__s' }) + text(x - 7, y + 4, '−', { cls: 'sk__s' }))) + (t ? (v ? text(x - 22, y + 5, t, { a: 'end' }) : text(x, y - 22, t)) : '');
   }
+  /** Diode orientée : anode vers l'arrière de l'angle (degrés), bornes à ±half. */
+  function Drot(x, y, deg, half) {
+    return '<g transform="rotate(' + deg + ' ' + x + ' ' + y + ')">' + wire('M' + (x - half) + ' ' + y + 'H' + (x - 10) + 'M' + (x + 10) + ' ' + y + 'H' + (x + half)) + '<path class="sk__p" d="M' + (x - 10) + ' ' + (y - 11) + 'v22l20 -11z"/>' + wire('M' + (x + 10) + ' ' + (y - 11) + 'v22') + '</g>';
+  }
   function gnd(x, y) { return wire('M' + x + ' ' + y + 'v8M' + (x - 11) + ' ' + (y + 8) + 'h22M' + (x - 7) + ' ' + (y + 12) + 'h14M' + (x - 3) + ' ' + (y + 16) + 'h6'); }
   /** Diode : anode à gauche (h) ou en haut (v). zener : cathode en Z. led : flèches. */
   function D(x, y, v, t, kind) {
@@ -81,6 +85,7 @@
     (o.links || []).forEach(function (l) {
       var A = by[l.a], B = by[l.b], sa = l.from || (B.x >= A.x + A.w ? 'r' : B.x + B.w <= A.x ? 'l' : B.y >= A.y ? 'b' : 't'), sb = l.to || (sa === 'r' ? 'l' : sa === 'l' ? 'r' : sa === 'b' ? 't' : 'b');
       var p = anchor(A, sa), q = anchor(B, sb), d;
+      if (l.tx != null) q[0] = l.tx;
       if (p[0] === q[0] || p[1] === q[1]) d = 'M' + p[0] + ' ' + p[1] + 'L' + q[0] + ' ' + q[1];
       else if (sa === 'r' || sa === 'l') { var mx = (p[0] + q[0]) / 2; d = 'M' + p[0] + ' ' + p[1] + 'H' + mx + 'V' + q[1] + 'H' + q[0]; }
       else { var my = (p[1] + q[1]) / 2; d = 'M' + p[0] + ' ' + p[1] + 'V' + my + 'H' + q[0] + 'V' + q[1]; }
@@ -95,5 +100,5 @@
   }
   function hash(s) { var h = 0; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return h; }
 
-  return { esc: esc, svg: svg, wire: wire, text: text, node: node, R: R, C: C, L: L, V: V, D: D, gnd: gnd, npn: npn, nmos: nmos, opamp: opamp, blocks: blocks };
+  return { esc: esc, svg: svg, wire: wire, text: text, node: node, R: R, C: C, L: L, V: V, D: D, Drot: Drot, gnd: gnd, npn: npn, nmos: nmos, opamp: opamp, blocks: blocks };
 });

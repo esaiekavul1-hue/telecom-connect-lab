@@ -36,7 +36,7 @@
     objectives: ['Décrire une table, une clé primaire et une clé étrangère.', 'Écrire la logique d’une requête de sélection et de jointure.', 'Expliquer l’intérêt de la normalisation.', 'Énoncer les propriétés ACID d’une transaction.'],
     prerequisites: 'Architecture d’un ordinateur.',
     sources: ['Pages « Relational model », « Database normalization », « ACID ».'],
-    figures: { er: { caption: 'Deux tables reliées par une clé : chaque note référence un étudiant.', svg: function () { return S.blocks({ w: 520, h: 130, label: 'Table étudiants et table notes liées.', boxes: [{ id: 'a', x: 40, y: 35, w: 170, h: 60, t: 'etudiants', sub: 'id, nom, filiere' }, { id: 'b', x: 310, y: 35, w: 170, h: 60, t: 'notes', sub: 'etu, module, note' }], links: [{ a: 'b', b: 'a', t: 'notes.etu → etudiants.id' }] }); } } },
+    figures: { er: { caption: 'Deux tables reliées par une clé : chaque note référence un étudiant.', svg: function () { return S.blocks({ w: 520, h: 130, label: 'Table étudiants et table notes liées.', boxes: [{ id: 'a', x: 20, y: 35, w: 150, h: 60, t: 'etudiants', sub: 'id, nom, filiere' }, { id: 'b', x: 350, y: 35, w: 150, h: 60, t: 'notes', sub: 'etu, module, note' }], links: [{ a: 'b', b: 'a', t: 'notes.etu → etudiants.id' }] }); } } },
     chapters: [
       { title: 'Le modèle relationnel', summary: 'Tables, clés, relations.', html: [
         '<p class="lead">Le modèle relationnel range les données en tables, reliées entre elles par des valeurs communes.</p>',

@@ -56,7 +56,7 @@
     var mod = TCL.registry.byId(id);
     if (!mod || !TCL.registry.liveParts(mod).lab) return TCL.pages.notFound.render(main);
     var info = labInfo(id);
-    main.innerHTML = '<div class="container page">' + P.crumbs([{ label: 'Mon laboratoire', href: '#/laboratoire' }, { label: info.title }]) + P.moduleNav(id, 'lab') + '<div id="lab-host"></div></div>';
+    main.innerHTML = '<div class="container page">' + P.crumbs([{ label: 'Mon laboratoire', href: '#/laboratoire' }, { label: info.title }]) + P.moduleNav(id, 'lab') + '<div id="lab-host"></div>' + (TCL.curriculum.competencies[id] ? '<p class="ask-ai"><a href="#/assistant/' + id + '?labo=1">' + I('sparkle') + 'Poser une question sur ce laboratoire</a></p>' : '') + '</div>';
     return TCL.labs[id].mount(U.qs('#lab-host', main));
   }
 

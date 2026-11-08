@@ -23,7 +23,7 @@
     prerequisites: 'Capteurs, actionneurs et mesures.',
     sources: ['Espressif ESP32 Series Datasheet v5.3 (sommeil profond, courants radio).', 'NIST IR 8259A (socle de capacités).'],
     figures: { cyc: { caption: 'Cycle typique d’un nœud : un long sommeil, un court réveil, une courte émission.', options: function () { function I(t) { var p = t % 10; return p < 0.2 ? 240 : p < 1 ? 40 : 0.01; } return { kind: 'xy', title: 'Courant consommé', desc: 'Courant au cours d’un cycle de fonctionnement.', x: { min: 0, max: 20, label: 'temps (s, illustratif)' }, y: { min: 0, max: 280, label: 'courant (mA)' }, series: [{ samples: 800, fn: I }] }; } },
-      core: { caption: 'Les six capacités du socle NIST IR 8259A.', svg: function () { var bx = CORE.map(function (t, i) { return { id: 'c' + i, x: 15 + (i % 2) * 250, y: 12 + Math.floor(i / 2) * 44, w: 240, h: 36, t: t }; }); return S.blocks({ w: 520, h: 150, label: 'Capacités de cybersécurité.', boxes: bx, links: [] }); } } },
+      core: { caption: 'Les six capacités du socle NIST IR 8259A.', svg: function () { var bx = CORE.map(function (t, i) { return { id: 'c' + i, x: 15 + (i % 2) * 250, y: 12 + Math.floor(i / 2) * 44, w: 240, h: 36, t: t.replace('Connaissance de l’état de cybersécurité', 'État de cybersécurité') }; }); return S.blocks({ w: 520, h: 150, label: 'Capacités de cybersécurité.', boxes: bx, links: [] }); } } },
     chapters: [
       { title: 'Budget énergétique', summary: 'Courant moyen, autonomie.', html: [
         '<p class="lead">Un microcontrôleur dort presque tout le temps. Le courant moyen dépend surtout de la durée d’activité.</p>',

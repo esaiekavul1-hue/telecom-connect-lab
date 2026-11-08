@@ -35,7 +35,7 @@
   var math = { VT: VT, VBE: VBE, VCESAT: VCESAT, bias: bias, nmosId: nmosId, clipLimits: clipLimits };
 
   function ampSvg(dark, s) {
-    return S.svg(520, 250, 'Amplificateur émetteur commun avec pont de base R1 R2, résistance de collecteur Rc, résistance d’émetteur Re.', S.wire('M60 25H440M130 25V50M130 110V200M130 130H230M285 25V60M285 120V160M285 95H250M285 220V235M130 230V235M60 235H440M285 130H380M130 160V170') + S.R(130, 80, true, 'R₁') + S.R(130, 180, true, 'R₂') + S.R(285, 60, true, 'Rc') + S.npn(260, 130, '') + S.R(285, 190, true, 'Re') + S.text(60, 18, s ? 'Vcc = ' + fN(s.Vcc) + ' V' : 'Vcc', { a: 'start' }) + S.text(390, 125, 'sortie', { a: 'start' }) + S.node(130, 130) + S.node(285, 130) + S.gnd(285, 235), dark);
+    return S.svg(520, 285, 'Amplificateur émetteur commun : pont de base R1 R2 sur la base, Rc entre Vcc et le collecteur, Re entre l’émetteur et la masse, sortie sur le collecteur.', S.wire('M60 25H440M130 25V55M285 25V45M130 115V170M130 230V255M285 245V255M60 255H440M130 150H240M285 105V115M285 110H390') + S.R(130, 85, true, 'R₁') + S.R(130, 200, true, 'R₂') + S.R(285, 75, true, 'Rc') + S.npn(270, 150, '') + S.R(285, 215, true, 'Re') + S.text(60, 18, s ? 'Vcc = ' + fN(s.Vcc) + ' V' : 'Vcc', { a: 'start' }) + S.text(398, 115, 'sortie', { a: 'start' }) + S.text(190, 142, 'base') + S.node(130, 150) + S.node(285, 110) + S.gnd(285, 255), dark);
   }
   var EXP = { Vcc: 12, R1: 47000, R2: 10000, Rc: 2200, Re: 470, beta: 200, bypass: true };
   var bx = bias(EXP);
