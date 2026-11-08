@@ -19,8 +19,20 @@
     invalid_messages: 'Message trop long : limitez-le à 2 000 caractères.'
   };
 
-  function progressContext(mod) {
-    var ctx = O.ctx(), parts = [];
+  /** Page d'où vient l'étudiant : #/assistant/<module>?chapitre=c2 ou ?labo=1. */
+  function origin(mod) {
+    var q = (root.location.hash.split('?')[1] || '').split('&').map(function (x) { return x.split('='); });
+    function get(k) { var f = q.filter(function (x) { return x[0] === k; })[0]; return f ? f[1] : null; }
+    var ch = get('chapitre'), lesson = mod && TCL.lessons && TCL.lessons[mod];
+    if (ch && lesson) { var c = lesson.chapters.filter(function (x) { return x.id === ch; })[0]; if (c) return { label: 'Chapitre : ' + c.title, text: 'L’étudiant lit le chapitre « ' + c.title + ' ».' }; }
+    if (get('labo') && mod && TCL.labs && TCL.labs[mod]) return { label: 'Laboratoire : ' + TCL.labs[mod].title, text: 'L’étudiant travaille dans le laboratoire « ' + TCL.labs[mod].title + ' ».' };
+    return null;
+  }
+
+  function progressContext(mod, from) {
+    var ctx = O.ctx(), parts = [], t = TCL.access.track();
+    if (t.state === 'set') parts.push('Parcours : ' + t.label + '.');
+    if (from) parts.push(from.text);
     if (mod && ctx.content[mod]) {
       var m = TCL.mastery.moduleMastery(mod, ctx);
       parts.push('Avancement du module : ' + m.steps.map(function (s) { return s.label + ' ' + s.percent + ' %'; }).join(', ') + '.');
@@ -40,11 +52,11 @@
     }
     var mods = Object.keys(CUR.competencies).filter(function (id) { return TCL.registry.byId(id) && TCL.access.allows(id); });
     var current = mods.indexOf(params.module) >= 0 ? params.module : '';
-    var history = [], busy = false, gone = false, mode = 'explain';
+    var history = [], busy = false, gone = false, mode = 'explain', from = origin(current);
 
     main.innerHTML = '<div class="container page page--narrow">' + P.crumbs([{ label: 'Assistant' }]) +
       P.head('Assistant pédagogique', 'Posez vos questions sur le cours : il explique, reformule, donne des indices et vous propose des exercices.') +
-      '<div id="ai-status"></div><section class="chat"><div class="chat__tools"><div class="control"><label for="ai-mod">Module</label><select id="ai-mod"><option value="">Tous les modules</option>' +
+      (from ? '<p class="track-line">' + I('book') + '<span>' + esc(from.label) + '</span></p>' : '') + '<div id="ai-status"></div><section class="chat"><div class="chat__tools"><div class="control"><label for="ai-mod">Module</label><select id="ai-mod"><option value="">Tous les modules</option>' +
       mods.map(function (id) { return '<option value="' + id + '"' + (id === current ? ' selected' : '') + '>' + esc(CUR.competencies[id].title) + '</option>'; }).join('') + '</select></div>' +
       '<div class="chips" role="group" aria-label="Type d’aide">' + MODES.map(function (m) { return '<button type="button" class="chip chip--text' + (m[0] === mode ? ' is-active' : '') + '" data-mode="' + m[0] + '" aria-pressed="' + (m[0] === mode) + '">' + esc(m[1]) + '</button>'; }).join('') + '</div></div>' +
       '<div class="chat__log" id="ai-log" aria-live="polite"></div>' +
@@ -78,7 +90,7 @@
         U.qsa('[data-mode]', main).forEach(function (x) { var on = x === b; x.classList.toggle('is-active', on); x.setAttribute('aria-pressed', String(on)); });
       });
     });
-    U.qs('#ai-mod', main).addEventListener('change', function () { current = this.value; });
+    U.qs('#ai-mod', main).addEventListener('change', function () { current = this.value; from = null; });
 
     U.qs('#ai-form', main).addEventListener('submit', function (e) {
       e.preventDefault();
@@ -90,7 +102,7 @@
       bubble('user', text2html(q));
       var wait = bubble('bot', '<span class="spinner" aria-hidden="true"></span> Réflexion…');
       var profile = O.get().profile;
-      TCL.api.tutor({ messages: history, mode: mode, module: current ? CUR.competencies[current].title : undefined, level: profile && profile.space, context: progressContext(current) }).then(function (r) {
+      TCL.api.tutor({ messages: history, mode: mode, module: current ? CUR.competencies[current].title : undefined, level: profile && profile.space, context: progressContext(current, from) }).then(function (r) {
         if (gone) return;
         if (r.data && r.data.text) {
           history.push({ role: 'assistant', content: r.data.text });

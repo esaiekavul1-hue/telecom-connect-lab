@@ -109,6 +109,9 @@
   function showCatalogueLoading(main) {
     main.innerHTML = '<div class="container page"><p class="loading" id="track-loading" role="status"><span class="spinner" aria-hidden="true"></span>Chargement de vos contenus…</p></div>';
 
+    // La reprise (reroute) doit rester possible pendant cette attente.
+    document.body.dataset.ready = '1';
+
     if (TCL.content.pending()) return;
 
     TCL.content.load().then(function () {

@@ -84,7 +84,7 @@ async function suiteA(browser) {
   await go(page, '');
   ok('A1 l’accueil affiche le nom, le slogan et la signature', /TELECOM CONNECT LAB/.test(await text(page, 'h1')) && /Apprendre · Simuler · Pratiquer · Innover/.test(await text(page, '.hero')) && /Du réel au virtuel\. De la théorie à la pratique\./.test(await text(page, '.hero')));
   ok('A2 boutons « Choisir mon parcours » et « Explorer le laboratoire » présents', await page.isVisible('text=Choisir mon parcours') && await page.isVisible('text=Explorer le laboratoire'));
-  ok('A3 accueil : les 10 modules sont affichés « Disponible » avec leurs liens Leçon / Laboratoire / Défis, aucun « En préparation »', (await page.$$('.module-grid .module-card')).length === 10 && (await page.$$('.module-grid .module-card--live')).length === 10 && (await page.$$('.module-grid a[href^="#/lecons/"]')).length >= 9 && (await page.$$('.module-grid a[href^="#/laboratoire/"]')).length === 10 && (await page.$$('.module-grid a[href^="#/defis/"]')).length === 10 && !/En préparation/.test(await text(page, 'main')));
+  ok('A3 accueil : les 40 modules sont affichés « Disponible » avec leurs liens Leçon / Laboratoire / Défis, aucun « En préparation »', (await page.$$('.module-grid .module-card')).length === 40 && (await page.$$('.module-grid .module-card--live')).length === 40 && (await page.$$('.module-grid a[href^="#/lecons/"]')).length >= 39 && (await page.$$('.module-grid a[href^="#/laboratoire/"]')).length === 40 && (await page.$$('.module-grid a[href^="#/defis/"]')).length === 40 && !/En préparation/.test(await text(page, 'main')));
   var navs = [['Mes leçons', '#/lecons', 'Mes leçons'], ['Mon laboratoire', '#/laboratoire', 'Mon laboratoire'], ['Mes défis', '#/defis', 'Mes défis'], ['Parcours', '#/parcours', 'Parcours'], ['Évaluations', '#/evaluations', 'Évaluations'], ['Mon espace', '#/mon-espace', 'Bonjour']];
   var navOk = true, navDetail = '';
   for (var n of navs) {
@@ -100,7 +100,7 @@ async function suiteA(browser) {
 
   // Leçons
   await go(page, 'lecons');
-  ok('A7 la bibliothèque présente 4 catégories et 10 leçons ouvertes, chacune avec lien vers sa simulation et ses défis, aucune « en préparation »', (await page.$$('.cat')).length === 4 && (await page.$$('.card--live')).length === 10 && (await page.$$('.card--soon')).length === 0 && (await page.$$('.card--live a[href^="#/laboratoire/"]')).length === 10 && (await page.$$('.card--live a[href^="#/defis/"]')).length === 10);
+  ok('A7 la bibliothèque présente 13 catégories et 40 leçons ouvertes, chacune avec lien vers sa simulation et ses défis, aucune « en préparation »', (await page.$$('.cat')).length === 13 && (await page.$$('.card--live')).length === 40 && (await page.$$('.card--soon')).length === 0 && (await page.$$('.card--live a[href^="#/laboratoire/"]')).length === 40 && (await page.$$('.card--live a[href^="#/defis/"]')).length === 40);
   await go(page, 'lecons/signaux');
   ok('A8 la leçon affiche objectifs et 6 chapitres', (await page.$$('.objectives li')).length === 5 && (await page.$$('.chapter-row')).length === 6);
   var chapterFigs = 0;
@@ -196,12 +196,13 @@ async function suiteA(browser) {
   var kpis = (await text(page, '.kpis')).replace(/\s+/g, ' ');
   // Tous modules : 50 chapitres + 32 missions + 83 exercices = 165 activités ; ici 1 + 3 + 8 = 12 → 7 %
   var sigRow = norm(await text(page, '.progress-table tr[data-module="signaux"]'));
-  ok('A31 tableau de bord : 7 % (12 / 184), 1 / 55 chapitres, 10 / 92 exercices effectués, 3 / 37 missions ; ligne « signaux » à 63 % (12 / 19)', kpis.includes('7 %') && kpis.includes('12 activités terminées sur 184') && kpis.includes('1 / 55') && kpis.includes('10 / 92') && kpis.includes('3 / 37') && /63 %/.test(sigRow), kpis + ' || ' + sigRow);
+  var totals = await page.evaluate(function () { return TCL.registry.overallProgress(TCL.store.get()); });
+  ok('A31 tableau de bord : 12 activités, 1 chapitre, 10 exercices effectués, 3 missions, calculés sur tout le catalogue ; ligne « signaux » à 63 % (12 / 19)', kpis.includes(Math.round(12 / totals.total * 100) + ' %') && kpis.includes('12 activités terminées sur ' + totals.total) && kpis.includes('1 / ' + totals.chaptersTotal) && kpis.includes('10 / ' + totals.exTotal) && kpis.includes('3 / ' + totals.missionsTotal) && /63 %/.test(sigRow), kpis + ' || ' + sigRow);
   ok('A32 activités récentes enregistrées (série, exercices, missions, chapitre)', (await page.$$('.activity li')).length >= 8 && /Série terminée \(Comprendre les signaux\) : 8 \/ 10/.test(await text(page, '.activity')));
   ok('A33 prochaines étapes calculées (chapitre suivant à lire, exercices à retravailler)', /lire le chapitre « Le modèle du signal sinusoïdal »/.test(await text(page, '.next-steps')) && /retravailler/.test(await text(page, '.next-steps')));
   await shot(page, 'A-progress');
   await page.reload(); await page.waitForTimeout(300);
-  ok('A34 la progression survit à l’actualisation de la page', (await text(page, '.kpis')).includes('12 activités terminées sur 184'));
+  ok('A34 la progression survit à l’actualisation de la page', (await text(page, '.kpis')).includes('12 activités terminées sur ' + totals.total));
 
   // Compte non configuré
   await go(page, 'compte');
@@ -333,7 +334,7 @@ async function suiteB(browser) {
   ok('B18b service sans migration : le parcours choisi est retrouvé sur un autre appareil', /Licence 1/.test(await text(q, 'main')) && (await q.evaluate(function () { return location.hash; })) === '#/mon-espace', await text(q, 'main'));
   await go(q, 'progression');
   var k2 = (await text(q, '.kpis')).replace(/\s+/g, ' ');
-  ok('B19 autre appareil : la progression du compte est retrouvée (1 chapitre lu, 1 exercice effectué)', k2.includes('1 / 22') && /Exercices effectués ?1 \/ 38/.test(k2), k2);
+  ok('B19 autre appareil : la progression du compte est retrouvée (1 chapitre lu, 1 exercice effectué)', /Chapitres lus ?1 \/ \d+/.test(k2) && /Exercices effectués ?1 \/ \d+/.test(k2), k2);
   await shot(q, 'B-device2-progress');
 
   // Limite d'envoi
@@ -390,7 +391,7 @@ async function suiteC(browser) {
   var errors = []; watch(page, errors);
 
   await go(page, 'laboratoire');
-  ok('C1 « Mon laboratoire » : 10 simulations disponibles, aucune en préparation', (await page.$$('.lab-card')).length === 10 && (await page.$$('.soon .badge--soon')).length === 0 && !/en préparation/i.test(await text(page, 'main')));
+  ok('C1 « Mon laboratoire » : 40 simulations disponibles, aucune en préparation', (await page.$$('.lab-card')).length === 40 && (await page.$$('.soon .badge--soon')).length === 0 && !/en préparation/i.test(await text(page, 'main')));
   await go(page, 'laboratoire/satellites');
   ok('C2 une simulation inexistante n’est pas accessible (page « n’existe pas »)', /n’existe pas/.test(await text(page, 'h1')));
 
@@ -524,7 +525,11 @@ async function suiteD(browser) {
   var errors = []; watch(page, errors);
   await go(page, '');
   var mods = await page.evaluate(function () { return TCL.registry.modules.map(function (m) { return { id: m.id, title: m.title, chapters: TCL.lessons[m.id].chapters.map(function (c) { return c.id; }), missions: TCL.labs[m.id].missions.length, exercises: TCL.exercises[m.id].count }; }); });
-  ok('D1 registre : 10 modules, chacun avec leçon, laboratoire et exercices réellement chargés', mods.length === 10 && (await page.evaluate(function () { return TCL.registry.modules.every(function (m) { var p = TCL.registry.liveParts(m); return p.lesson && p.lab && p.exercises && TCL.registry.statusOf(m) === 'available'; }); })));
+  var V1_IDS = ['signaux', 'ondes-em', 'antennes', 'propagation', 'chaine', 'modulation', 'fibre', 'mobiles', 'ip', 'circuits'];
+  var catalogueSize = mods.length;
+  // Les 30 modules ajoutés sont parcourus par tests/e2e-catalogue.js.
+  mods = mods.filter(function (m) { return V1_IDS.indexOf(m.id) >= 0; });
+  ok('D1 registre : les 10 modules V1 présents parmi 40, chacun avec leçon, laboratoire et exercices réellement chargés', mods.length === 10 && catalogueSize === 40 && (await page.evaluate(function () { return TCL.registry.modules.every(function (m) { var p = TCL.registry.liveParts(m); return p.lesson && p.lab && p.exercises && TCL.registry.statusOf(m) === 'available'; }); })));
   ok('D2 au moins 5 chapitres, 3 missions et 9 exercices par module', mods.every(function (m) { return m.chapters.length >= 5 && m.missions >= 3 && m.exercises >= 9; }), JSON.stringify(mods.map(function (m) { return m.id + ':' + m.chapters.length + '/' + m.missions + '/' + m.exercises; })));
 
   // Leçons : chaque chapitre s'ouvre, chaque figure est dessinée, barre Leçon / Laboratoire / Défis présente
@@ -640,7 +645,7 @@ async function suiteD(browser) {
 
   await go(page, 'progression');
   var kp = norm(await text(page, '.kpis'));
-  ok('D21 « Ma progression » : 92 / 92 exercices réussis, 6 chapitres de plus, missions comptées', /92 \/ 92/.test(kp) || /Exercices effectués ?92 \/ 92/.test(kp), kp);
+  ok('D21 « Ma progression » : 92 / 92 exercices réussis, 6 chapitres de plus, missions comptées', /Exercices effectués ?92 \/ \d+/.test(kp), kp);
 
   // Robot de liens : toutes les adresses internes rencontrées mènent à une vraie page
   var seen = {}, queue = ['', 'lecons', 'laboratoire', 'defis', 'progression', 'compte', 'connexion'];

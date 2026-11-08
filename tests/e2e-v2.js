@@ -83,7 +83,7 @@ function rpcResult(p, name, args) { return p.evaluate(function (a) { return TCL.
   var home = await text(p, 'main');
   ok('accueil : Découvrir, Créer un compte, Se connecter', await p.isVisible('.hero__actions >> text=Découvrir') && await p.isVisible('.hero__actions >> text=Créer un compte') && await p.isVisible('.hero__actions >> text=Se connecter'));
   ok('accueil : objectifs, six parcours, avantages, fonctionnement', (await p.$$('.space-card')).length === 6 && /Notre objectif/.test(home) && /Conçue pour vos conditions/.test(home) && /Comment ça marche/.test(home));
-  ok('accueil : aucune fonction d’IA annoncée alors qu’elle n’est pas connectée', !/Assistant/.test(home));
+  ok('accueil : assistant présenté comme non encore en service', /Assistant pédagogique/.test(home) && /pas encore en service/.test(home));
   var nav = (await p.$$eval('#nav-list .nav__link:not(.nav__link--auth)', function (a) { return a.map(function (x) { return x.textContent; }); })).join(',');
   ok('navigation publique conservée : Accueil, Leçons, Laboratoire, Défis, Progression', nav === 'Accueil,Leçons,Laboratoire,Défis,Progression', nav);
   ok('le catalogue complet n’est pas téléchargé par un visiteur', await p.evaluate(function () { return !performance.getEntriesByType('resource').some(function (r) { return /modules\/(fibre|ip|antennes|signaux\/lesson)/.test(r.name); }) && !(window.TCL.lessons && TCL.lessons.fibre); }));
@@ -138,7 +138,7 @@ function rpcResult(p, name, args) { return p.evaluate(function (a) { return TCL.
   await p.goto(S.site + '#/lecons'); await waitHash(p, '#/bienvenue');
   ok('impossible de contourner le choix', true);
   await p.check('input[name=track][value=pro]');
-  ok('Monde professionnel : spécialisations proposées', await p.isVisible('#spec') && (await p.$$('#spec option')).length === 9);
+  ok('Monde professionnel : spécialisations proposées', await p.isVisible('#spec') && (await p.$$('#spec option')).length === 8);
   await p.check('input[name=track][value=l1]');
   ok('spécialisations masquées pour les autres parcours', !(await p.isVisible('#spec')));
   await p.click('#track-ok');
@@ -162,17 +162,17 @@ function rpcResult(p, name, args) { return p.evaluate(function (a) { return TCL.
   console.log('\nContenus filtrés selon le parcours');
   await go(p, 'lecons');
   var mods = (await p.$$eval('.card[data-module]', function (a) { return a.map(function (x) { return x.getAttribute('data-module'); }); })).sort().join(',');
-  ok('Leçons : uniquement les modules de L1', mods === 'chaine,circuits,ip,signaux', mods);
-  ok('Leçons : contenus en développement identifiés', (await p.$$('.soon')).length === 3 && /En cours de développement/.test(await text(p, 'main')));
+  ok('Leçons : uniquement les modules de L1', mods === 'ac,analyse,binaire,chaine,circuits,diodes,fourier,iot-capteurs,iot-intro,ip,mesures,ordinateur,signaux,systemes', mods);
+  ok('Leçons : aucun cours vide annoncé dans le parcours', (await p.$$('.soon')).length === 0 && !/En cours de développement/.test(await text(p, 'main')));
   await shot(p, '07-lecons-l1');
   await go(p, 'laboratoire');
-  ok('Laboratoires : uniquement ceux de L1', (await p.$$('.lab-card')).length === 4);
+  ok('Laboratoires : uniquement ceux de L1', (await p.$$('.lab-card')).length === 14);
   await go(p, 'defis');
-  ok('Défis : uniquement ceux de L1', (await p.$$('.card[data-module]')).length === 4);
+  ok('Défis : uniquement ceux de L1', (await p.$$('.card[data-module]')).length === 14);
   await go(p, 'evaluations');
-  ok('Évaluations : L1 et tests de positionnement', (await p.$$('.exam-row')).length === 8, (await p.$$('.exam-row')).length);
+  ok('Évaluations : L1 et tests de positionnement', (await p.$$('.exam-row')).length === 22, (await p.$$('.exam-row')).length);
   await go(p, 'assistant');
-  ok('Assistant : modules du parcours', (await p.$$('#ai-mod option')).length === 5);
+  ok('Assistant : modules du parcours', (await p.$$('#ai-mod option')).length === 15);
   var off = [];
   for (var o of ['lecons/fibre', 'lecons/fibre/c1', 'laboratoire/mobiles', 'defis/antennes', 'competence/modulation', 'evaluations/final-fibre']) {
     await go(p, o);
@@ -180,7 +180,7 @@ function rpcResult(p, name, args) { return p.evaluate(function (a) { return TCL.
   }
   ok('module hors parcours : page explicative, pas de contenu', off.length === 0, off.join(' '));
   await go(p, 'parcours');
-  ok('Mon parcours : uniquement les cours de L1', /Mon parcours : Licence 1/.test(await text(p, 'main h1')) && (await p.$$('.course')).length === 6);
+  ok('Mon parcours : uniquement les cours de L1', /Mon parcours : Licence 1/.test(await text(p, 'main h1')) && (await p.$$('.course')).length === 7);
 
   console.log('\nContrôles côté serveur');
   await go(p, 'mon-espace');
@@ -256,6 +256,9 @@ function rpcResult(p, name, args) { return p.evaluate(function (a) { return TCL.
   await go(p, 'evaluations/final-signaux'); await p.click('#start'); await p.waitForSelector('#eform');
   await answerAll(p, email, 5, 5);
   await finishExam(p);
+  await go(p, 'evaluations/final-analyse'); await p.click('#start'); await p.waitForSelector('#eform');
+  await answerAll(p, email, 5, 5);
+  await finishExam(p);
   await go(p, 'changer-parcours');
   var before = (await S.db.db.query('select (select count(*)::int from public.attempts) a, (select count(*)::int from public.competency_validations) v')).rows[0];
   p.once('dialog', function (x) { x.accept(); });
@@ -263,13 +266,13 @@ function rpcResult(p, name, args) { return p.evaluate(function (a) { return TCL.
   await waitHash(p, '#/mon-espace');
   ok('passage en L2 après validation des prérequis', (await profileOf(email)).space === 'l2' && /Licence 2/.test(await text(p, 'main')));
   var after = (await S.db.db.query('select (select count(*)::int from public.attempts) a, (select count(*)::int from public.competency_validations) v')).rows[0];
-  ok('aucun résultat ni validation supprimés', after.a === before.a && after.v === before.v && after.v === 2, JSON.stringify([before, after]));
-  ok('compétence de L1 toujours affichée', /Circuits électriques/.test(await text(p, '.dash__side')) && /parcours précédent/.test(await text(p, '.dash__side')));
+  ok('aucun résultat ni validation supprimés', after.a === before.a && after.v === before.v && after.v === 3, JSON.stringify([before, after]));
+  ok('compétence de L1 toujours affichée', /Analyse des circuits/.test(await text(p, '.dash__side')) && /parcours précédent/.test(await text(p, '.dash__side')));
   await go(p, 'lecons');
-  ok('L2 : ses modules, le prérequis et l’ancien module signalés', (await p.$$('.card[data-module=fibre]')).length === 1 && /Hors de votre parcours/.test(await text(p, '.card[data-module=circuits]')) && /Base à consolider/.test(await text(p, '.card[data-module=signaux]')));
-  await go(p, 'lecons/circuits/c2');
-  ok('ancien module toujours consultable', /Les lois de Kirchhoff/.test(await text(p, 'main h1')));
-  await go(p, 'evaluations/final-circuits');
+  ok('L2 : ses modules, le prérequis et l’ancien module signalés', (await p.$$('.card[data-module=fibre]')).length === 1 && /Hors de votre parcours/.test(await text(p, '.card[data-module=analyse]')) && /Base à consolider/.test(await text(p, '.card[data-module=signaux]')));
+  await go(p, 'lecons/analyse/c2');
+  ok('ancien module toujours consultable', /Thévenin et Norton/.test(await text(p, 'main h1')));
+  await go(p, 'evaluations/final-analyse');
   ok('évaluation d’un ancien niveau refermée', /Hors de votre parcours/.test(await text(p, 'main h1')));
   await go(p, 'changer-parcours');
   ok('historique des parcours conservé', /Parcours choisi : Licence 1/.test(await text(p, 'main')) && /Licence 1 → Licence 2/.test(await text(p, 'main')));
@@ -281,6 +284,7 @@ function rpcResult(p, name, args) { return p.evaluate(function (a) { return TCL.
   var uid = await v1.evaluate(function () { return TCL.auth.state().user.id; });
   await S.db.db.query("update public.progress set data = $1, updated_at = now() where user_id = $2", [{ version: 1, updatedAt: '2026-11-01T00:00:00.000Z', lessons: { ip: { chapters: { c1: '2026-10-01T00:00:00.000Z' }, last: 'c1' } }, lab: {}, exercises: {}, activity: [], prefs: {} }, uid]);
   await v1.reload(); await waitHash(v1, '#/bienvenue');
+  await v1.waitForSelector('input[name=track]', { timeout: 8000 });
   ok('compte V1 sans parcours : sélection demandée, sans réinscription', (await v1.$$('input[name=track]')).length === 6);
   await chooseTrack(v1, 'l1');
   await go(v1, 'progression');
@@ -360,7 +364,7 @@ function rpcResult(p, name, args) { return p.evaluate(function (a) { return TCL.
   ok('spécialisation enregistrée', (await profileOf('mobile@exemple.org')).specialization === 'pro-fibre');
   await go(mp, 'lecons');
   var pm = (await mp.$$eval('.card[data-module]', function (x) { return x.map(function (y) { return y.getAttribute('data-module'); }); })).sort().join(',');
-  ok('spécialisation : uniquement ses modules et leurs bases', pm === 'fibre,ondes-em,signaux', pm);
+  ok('spécialisation : uniquement ses modules et leurs bases', pm === 'chaine,fibre,ondes-em,qualite,signaux', pm);
   for (var s of ['mon-espace', 'parcours', 'changer-parcours', 'lecons', 'laboratoire', 'defis', 'evaluations', 'progression', 'compte']) {
     await mp.goto(S.site + '#/' + s); await mp.waitForTimeout(300);
     var w2 = await mp.evaluate(function () { return document.documentElement.scrollWidth - window.innerWidth; });
