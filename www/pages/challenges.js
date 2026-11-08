@@ -19,7 +19,7 @@
   function list(main) {
     var st = TCL.store.get();
     var mods = TCL.registry.withExercises();
-    var all = TCL.registry.overallProgress(st);
+    var all = TCL.registry.overallProgress(st, TCL.access.coreIds());
     var cards = mods.map(function (m) {
       var api = TCL.exercises[m.id];
       var p = TCL.registry.moduleProgress(st, m.id);
@@ -27,7 +27,7 @@
       var cur = E.current;
       var curAnswered = cur && !cur.completedAt ? Object.keys(cur.answers || {}).length : 0;
       var label = curAnswered > 0 ? 'Reprendre la série (' + curAnswered + ' / ' + api.count + ')' : (p.seriesCount ? 'Nouvelle série' : 'Commencer les exercices');
-      return '<article class="card card--live" data-module="' + m.id + '"><div class="card__top">' + I(m.icon) + '<span class="badge badge--live">' + api.count + ' exercices</span></div>' +
+      return '<article class="card card--live" data-module="' + m.id + '"><div class="card__top">' + I(m.icon) + '<span class="badge badge--live">' + api.count + ' exercices</span>' + P.trackTag(m.id) + '</div>' +
         '<h3><a href="#/defis/' + m.id + '">' + esc(m.title) + '</a></h3>' +
         '<p>' + esc(skillsOf(api).slice(0, 5).join(', ')) + '.</p>' +
         '<p class="card__meta">Réussis : ' + p.exMastered + ' / ' + p.exTotal + (p.best != null ? ' · meilleur score ' + p.best + ' / ' + api.count : '') + '</p>' +
@@ -38,7 +38,7 @@
     main.innerHTML = '<div class="container page">' + P.crumbs([{ label: 'Mes défis' }]) +
       P.head('Mes défis', 'Des exercices vérifiés par le calcul, une série par module. Après chaque réponse, vous voyez la correction et son explication.',
         '<div class="head-stat"><p class="head-stat__value">' + all.exMastered + ' / ' + all.exTotal + '</p><p class="head-stat__label">exercices réussis au moins une fois</p></div>') +
-      '<div class="cards">' + cards + '</div></div>';
+      P.trackBanner() + P.trackEmpty(mods.length) + '<div class="cards">' + cards + '</div>' + P.trackPlanned() + '</div>';
   }
 
   /* -------------------------------- Session -------------------------------- */

@@ -215,7 +215,7 @@ async function suiteA(browser) {
   ok('A39 aucune requête vers un site externe (fonctionne hors ligne)', external.length === 0, external.join(', '));
 
   // Mobile + clavier
-  var m = await browser.newPage({ viewport: { width: 375, height: 760 } });
+  var mc = await browser.newContext({ viewport: { width: 375, height: 760 } }); await unconfigured(mc); var m = await mc.newPage();
   watch(m, errors);
   await m.goto(SITE + '#/'); await m.waitForTimeout(250);
   var navHidden = !(await m.isVisible('#site-nav'));
@@ -234,6 +234,7 @@ async function suiteA(browser) {
   await m.keyboard.press('Tab');
   ok('A42 clavier : le premier élément atteint est « Aller au contenu »', /Aller au contenu/.test(await m.evaluate(function () { return document.activeElement.textContent; })));
   var rm = await browser.newContext({ reducedMotion: 'reduce' });
+  await unconfigured(rm);
   var rp = await rm.newPage(); await rp.goto(SITE + '#/'); await rp.waitForTimeout(300);
   ok('A43 « réduire les animations » : l’oscilloscope d’accueil démarre en pause', (await rp.getAttribute('#hero-pause', 'aria-pressed')) === 'true');
   await rm.close();
@@ -258,7 +259,9 @@ async function suiteB(browser) {
 
   // Appareil 1 : progression en visiteur, puis création de compte
   var d1 = await newDevice(); var p = d1.page; watch(p, errors);
-  await go(p, 'lecons/signaux/c1'); await p.click('#mark-read'); await p.waitForTimeout(200);
+  await go(p, '');
+  await p.evaluate(function () { localStorage.setItem('tcl.progress.guest', JSON.stringify({ version: 1, updatedAt: '2026-10-01T00:00:00.000Z', lessons: { signaux: { chapters: { c1: '2026-10-01T00:00:00.000Z' }, last: 'c1' } }, lab: {}, exercises: {}, activity: [], prefs: {} })); });
+  await p.reload(); await p.waitForTimeout(300);
   await go(p, 'compte');
   ok('B1 non connecté : « Vous n’êtes pas connecté » et boutons de connexion', /Vous n’êtes pas connecté/.test(await text(p, 'main')));
   await go(p, 'inscription');
@@ -277,7 +280,11 @@ async function suiteB(browser) {
   if (mail.code === '000000') { await p.fill('#f-code', wrongCode); await p.click('#code-form button[type=submit]'); await p.waitForTimeout(300); }
   ok('B6 code incorrect refusé avec message, aucune connexion', /Code incorrect ou expiré/.test(await text(p, '#code-msg')) && /Connexion/.test(await text(p, '#nav-auth')));
   await p.fill('#f-code', mail.code); await p.click('#code-form button[type=submit]');
-  await p.waitForFunction(function () { return location.hash === '#/compte' && document.querySelector('.profile'); }, null, { timeout: 5000 });
+  await p.waitForSelector('#track-form', { timeout: 5000 });
+  ok('B6b compte neuf sans parcours : choix demandé', (await p.$$('input[name=track]')).length === 6);
+  await p.check('input[name=track][value=l1]'); await p.click('#track-ok');
+  await p.waitForFunction(function () { return location.hash === '#/mon-espace'; }, null, { timeout: 5000 });
+  await go(p, 'compte'); await p.waitForSelector('.profile', { timeout: 5000 });
   await p.waitForTimeout(500);
   ok('B7 code correct → « Mon compte » avec nom, e-mail et « adresse vérifiée »', /Brenda Test/.test(await text(p, '#profile-name')) && (await text(p, '.profile__email')).includes(EMAIL) && /adresse vérifiée/.test(await text(p, '.profile__email')));
   ok('B8 en-tête : « Déconnexion » affiché', /Déconnexion/.test(await text(p, '#nav-auth')));
@@ -306,7 +313,7 @@ async function suiteB(browser) {
   await go(p, 'compte');
   await p.click('#account-signout'); await p.waitForTimeout(800);
   var after = await p.evaluate(function () { return { ls: JSON.stringify(localStorage), ss: JSON.stringify(sessionStorage) }; });
-  ok('B15 déconnexion : « Connexion » réaffiché, « Vous n’êtes pas connecté », session effacée', /Connexion/.test(await text(p, '#nav-auth')) && /Vous n’êtes pas connecté/.test(await text(p, 'main')) && !/access_token/.test(after.ss) && !/access_token/.test(after.ls));
+  ok('B15 déconnexion : retour à l’accueil public, session effacée', /Connexion/.test(await text(p, '#nav-auth')) && (await p.evaluate(function () { return location.hash; })) === '#/' && await p.isVisible('.hero__actions') && !/access_token/.test(after.ss) && !/access_token/.test(after.ls));
   ok('B16 déconnexion : la copie locale de la progression du compte est retirée de l’appareil', !/tcl\.progress\.u\./.test(after.ls));
   st = await apiGet('/__test/state');
   ok('B17 déconnexion : la session est révoquée côté service', st.sessions === 0, 'sessions actives : ' + st.sessions);
@@ -321,11 +328,12 @@ async function suiteB(browser) {
   await q.waitForSelector('#f-code');
   mail = await apiGet('/__test/outbox?email=' + encodeURIComponent(EMAIL));
   await q.fill('#f-code', mail.code); await q.click('#code-form button[type=submit]');
-  await q.waitForFunction(function () { return location.hash === '#/compte' && document.querySelector('.profile'); }, null, { timeout: 5000 });
+  await q.waitForFunction(function () { return location.hash === '#/mon-espace'; }, null, { timeout: 5000 });
   await q.waitForTimeout(700);
+  ok('B18b service sans migration : le parcours choisi est retrouvé sur un autre appareil', /Licence 1/.test(await text(q, 'main')) && (await q.evaluate(function () { return location.hash; })) === '#/mon-espace', await text(q, 'main'));
   await go(q, 'progression');
   var k2 = (await text(q, '.kpis')).replace(/\s+/g, ' ');
-  ok('B19 autre appareil : la progression du compte est retrouvée (1 chapitre lu, 1 exercice effectué)', k2.includes('1 / 55') && /Exercices effectués ?1 \/ 92/.test(k2), k2);
+  ok('B19 autre appareil : la progression du compte est retrouvée (1 chapitre lu, 1 exercice effectué)', k2.includes('1 / 22') && /Exercices effectués ?1 \/ 38/.test(k2), k2);
   await shot(q, 'B-device2-progress');
 
   // Limite d'envoi
@@ -341,7 +349,7 @@ async function suiteB(browser) {
   await r3.fill('#f-email', EMAIL); await r3.click('#email-form button[type=submit]'); await r3.waitForSelector('#f-code');
   mail = await apiGet('/__test/outbox?email=' + encodeURIComponent(EMAIL));
   await r3.goto(mail.link); await r3.waitForTimeout(900);
-  ok('B21 lien magique : connexion établie, adresse nettoyée (#/compte), aucun jeton visible dans l’URL', /Déconnexion/.test(await text(r3, '#nav-auth')) && r3.url().endsWith('#/compte') && !/access_token/.test(r3.url()));
+  ok('B21 lien magique : connexion établie, adresse nettoyée (#/mon-espace), aucun jeton visible dans l’URL', /Déconnexion/.test(await text(r3, '#nav-auth')) && r3.url().endsWith('#/mon-espace') && !/access_token/.test(r3.url()));
   await r3.goto(mail.link); await r3.waitForTimeout(700);
   ok('B22 lien magique réutilisé → refusé avec un message clair (pas de fausse confirmation)', /expiré ou a déjà été utilisé/.test(await text(r3, '#toast-host')), await text(r3, '#toast-host'));
 
@@ -359,7 +367,9 @@ async function suiteB(browser) {
   await go(r3, 'connexion'); await r3.fill('#f-email', EMAIL); await r3.click('#email-form button[type=submit]'); await r3.waitForSelector('#f-code');
   mail = await apiGet('/__test/outbox?email=' + encodeURIComponent(EMAIL));
   await r3.fill('#f-code', mail.code); await r3.click('#code-form button[type=submit]');
-  await r3.waitForFunction(function () { return document.querySelector('.profile'); }, null, { timeout: 5000 }); await r3.waitForTimeout(700);
+  await r3.waitForFunction(function () { return /Déconnexion/.test(document.querySelector('#nav-auth').textContent); }, null, { timeout: 5000 }); await r3.waitForTimeout(700);
+  ok('B24b stockage distant indisponible : aucun parcours n’est redemandé', !/bienvenue/.test(r3.url()), r3.url());
+  await go(r3, 'compte'); await r3.waitForFunction(function () { return document.querySelector('.profile'); }, null, { timeout: 5000 }); await r3.waitForTimeout(400);
   ok('B25 stockage distant non installé → message explicite « exécutez supabase/schema.sql »', /schema\.sql/.test(await text(r3, '[data-sync-status]')), await text(r3, '[data-sync-status]'));
   await apiPost('/__test/flags', { tableMissing: false });
 
@@ -472,7 +482,7 @@ async function suiteC(browser) {
   ok('C30 les réglages de la simulation sont repris après actualisation (Pt = 40 dBm)', /40 dBm/.test(norm(await text(page, '#in-pt-out'))));
 
   // Mobile
-  var m = await browser.newPage({ viewport: { width: 375, height: 760 } }); watch(m, errors);
+  var mc = await browser.newContext({ viewport: { width: 375, height: 760 } }); await unconfigured(mc); var m = await mc.newPage(); watch(m, errors);
   var ov = [];
   for (var r of ['laboratoire', 'laboratoire/ondes-em', 'laboratoire/propagation', 'laboratoire/modulation', 'progression', '']) {
     await m.goto(SITE + '#/' + r); await m.waitForTimeout(300);

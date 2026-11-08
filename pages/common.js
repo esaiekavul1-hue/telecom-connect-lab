@@ -74,6 +74,37 @@
       }).join('') + '</ul></nav>';
   };
 
+  /** Rappelle le parcours actif en tête des listes de contenus. */
+  TCL.pages.trackBanner = function () {
+    var a = TCL.access, t = a.track();
+    if (a.mode() !== 'student') return '';
+    if (t.state === 'unknown') return '<div class="callout callout--warn">' + I('device') + '<p>Votre parcours n’a pas pu être chargé : tous les contenus sont affichés pour le moment.</p></div>';
+    if (t.state !== 'set') return '';
+    return '<p class="track-line">' + I('route') + '<span>Contenus du parcours <strong>' + esc(t.label) + '</strong></span> <a href="#/parcours">Voir mon parcours</a></p>';
+  };
+
+  /** Cours du parcours dont le contenu n'existe pas encore. */
+  TCL.pages.trackPlanned = function () {
+    var s = TCL.access.scope();
+    if (!s) return '';
+    var list = TCL.curriculum.trackCourses(s.track.space, s.track.specialization).filter(function (c) { return !c.modules.length; });
+    if (!list.length) return '';
+    return '<section aria-labelledby="planned-title"><h2 class="h-sub" id="planned-title">En cours de développement pour votre parcours</h2><ul class="soon-list">' +
+      list.map(function (c) { return '<li class="soon">' + I('clock') + '<div><h4>' + esc(c.title) + '</h4><p>Ce contenu n’est pas encore disponible.</p></div><span class="badge badge--soon">À développer</span></li>'; }).join('') + '</ul></section>';
+  };
+
+  TCL.pages.trackEmpty = function (count) {
+    if (count || !TCL.access.scope()) return '';
+    return '<div class="empty">' + I('clock', 'empty__icon') + '<h2>Aucun contenu disponible pour le moment</h2><p>Les contenus de votre parcours sont en cours de développement. Vous pouvez choisir un autre parcours en attendant : vos résultats seront conservés.</p><p><a class="btn btn--ghost" href="#/changer-parcours">Changer de parcours</a></p></div>';
+  };
+
+  TCL.pages.trackTag = function (id) {
+    var t = TCL.access.tag(id);
+    return t ? '<span class="badge badge--soon">' + esc(t) + '</span>' : '';
+  };
+
+  TCL.pages.statusBadge = function (text) { return '<p class="track-current">' + I('check') + '<span>' + esc(text) + '</span></p>'; };
+
   TCL.pages.notFound = {
     title: 'Page introuvable',
     render: function (main) {

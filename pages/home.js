@@ -8,6 +8,22 @@
   var TCL = root.TCL;
   var U = TCL.util, I = TCL.icon, M = TCL.signalMath, esc = U.esc;
 
+  function heroScopeHtml() {
+    return [
+      '<figure class="hero__scope">',
+      '<div class="hero__scope-top"><span class="hero__scope-name">' + I('wave') + 'Essai en direct</span>',
+      '<button type="button" class="icon-btn" id="hero-pause" aria-pressed="false" aria-label="Mettre l’animation en pause">' + I('pause') + '</button></div>',
+      '<div id="hero-plot" class="hero__plot"></div>',
+      '<div class="hero__knob">',
+      '<label for="hero-f">Fréquence</label>',
+      '<input type="range" id="hero-f" min="50" max="500" step="10" value="100">',
+      '<p class="hero__values" aria-live="polite"><span id="hero-fv"></span><span id="hero-tv"></span></p>',
+      '</div>',
+      '<figcaption>Augmentez la fréquence : les cycles se resserrent, car la période T = 1/f diminue.</figcaption>',
+      '</figure>'
+    ].join('');
+  }
+
   function render(main) {
     var st = TCL.store.get();
     var prog = TCL.registry.moduleProgress(st, 'signaux');
@@ -50,17 +66,7 @@
       '<a class="btn btn--on-dark btn--lg" href="#/laboratoire/signaux">' + I('flask') + 'Explorer le laboratoire</a>',
       '</div>',
       '</div>',
-      '<figure class="hero__scope">',
-      '<div class="hero__scope-top"><span class="hero__scope-name">' + I('wave') + 'Essai en direct</span>',
-      '<button type="button" class="icon-btn" id="hero-pause" aria-pressed="false" aria-label="Mettre l’animation en pause">' + I('pause') + '</button></div>',
-      '<div id="hero-plot" class="hero__plot"></div>',
-      '<div class="hero__knob">',
-      '<label for="hero-f">Fréquence</label>',
-      '<input type="range" id="hero-f" min="50" max="500" step="10" value="100">',
-      '<p class="hero__values" aria-live="polite"><span id="hero-fv"></span><span id="hero-tv"></span></p>',
-      '</div>',
-      '<figcaption>Augmentez la fréquence : les cycles se resserrent, car la période T = 1/f diminue.</figcaption>',
-      '</figure>',
+      heroScopeHtml(),
       '</div>',
       '</section>',
 
@@ -121,7 +127,12 @@
       return Object.assign(TCL.plot.sineOptions({ A: 4, f: 100, phi: 0, win: 0.02, showPeriod: true, ampMarker: true, title: 'Sinusoïde de 4 V à 100 Hz' }), { ratio: w < 500 ? 0.7 : 0.6 });
     });
 
-    // Oscilloscope d'accueil
+    var heroCleanup = mountHeroScope(main);
+    return function () { heroCleanup(); fig.destroy(); };
+  }
+
+  /** Oscilloscope d'accueil : réellement calculé, réglable par le visiteur. */
+  function mountHeroScope(main) {
     var heroEl = U.qs('#hero-plot', main);
     var slider = U.qs('#hero-f', main);
     var f = 100, offset = 0, paused = U.prefersReducedMotion(), raf = null, lastTs = null;
@@ -163,7 +174,7 @@
     document.addEventListener('visibilitychange', onVis);
     syncPauseBtn(); values(); play();
 
-    return function () { stop(); hero.destroy(); fig.destroy(); document.removeEventListener('visibilitychange', onVis); };
+    return function () { stop(); hero.destroy(); document.removeEventListener('visibilitychange', onVis); };
   }
 
   function step(title, icon, href, text, cta) {
@@ -171,4 +182,6 @@
   }
 
   TCL.pages.home = { title: 'Accueil', render: render };
+  TCL.pages.heroScopeHtml = heroScopeHtml;
+  TCL.pages.mountHeroScope = mountHeroScope;
 })(window);

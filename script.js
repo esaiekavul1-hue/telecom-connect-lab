@@ -1,8 +1,9 @@
-
 /*
  * TELECOM CONNECT LAB — Démarrage de l'application, navigation et en-tête
  * ---------------------------------------------------------------------
  * Navigation par ancres (#/lecons, #/laboratoire…).
+ * TCL.access.decide choisit, pour chaque adresse, ce qui s'affiche selon
+ * que l'on est visiteur ou étudiant, et selon le parcours du compte.
  */
 (function (root) {
   'use strict';
@@ -11,15 +12,35 @@
   var U = TCL.util;
   var I = TCL.icon;
 
-  var NAV = [
-    { id: 'parcours', href: '#/parcours', label: 'Parcours', icon: 'route' },
-    { id: 'lessons', href: '#/lecons', label: 'Mes leçons', icon: 'book' },
-    { id: 'lab', href: '#/laboratoire', label: 'Mon laboratoire', icon: 'flask' },
-    { id: 'challenges', href: '#/defis', label: 'Mes défis', icon: 'target' },
-    { id: 'evaluations', href: '#/evaluations', label: 'Évaluations', icon: 'shield' },
-    { id: 'assistant', href: '#/assistant', label: 'Assistant', icon: 'sparkle' },
-    { id: 'dashboard', href: '#/mon-espace', label: 'Mon espace', icon: 'user' }
-  ];
+  var NAVS = {
+    visitor: [
+      { id: 'home', href: '#/', label: 'Accueil', icon: 'home' },
+      { id: 'lessons', href: '#/lecons', label: 'Leçons', icon: 'book' },
+      { id: 'lab', href: '#/laboratoire', label: 'Laboratoire', icon: 'flask' },
+      { id: 'challenges', href: '#/defis', label: 'Défis', icon: 'target' },
+      { id: 'progress', href: '#/progression', label: 'Progression', icon: 'chart' }
+    ],
+    student: [
+      { id: 'dashboard', href: '#/mon-espace', label: 'Mon espace', icon: 'user' },
+      { id: 'lessons', href: '#/lecons', label: 'Mes leçons', icon: 'book' },
+      { id: 'lab', href: '#/laboratoire', label: 'Mon laboratoire', icon: 'flask' },
+      { id: 'challenges', href: '#/defis', label: 'Mes défis', icon: 'target' },
+      { id: 'evaluations', href: '#/evaluations', label: 'Évaluations', icon: 'shield' },
+      { id: 'assistant', href: '#/assistant', label: 'Assistant', icon: 'sparkle' },
+      { id: 'progress', href: '#/progression', label: 'Ma progression', icon: 'chart' }
+    ],
+    open: [
+      { id: 'parcours', href: '#/parcours', label: 'Parcours', icon: 'route' },
+      { id: 'lessons', href: '#/lecons', label: 'Mes leçons', icon: 'book' },
+      { id: 'lab', href: '#/laboratoire', label: 'Mon laboratoire', icon: 'flask' },
+      { id: 'challenges', href: '#/defis', label: 'Mes défis', icon: 'target' },
+      { id: 'evaluations', href: '#/evaluations', label: 'Évaluations', icon: 'shield' },
+      { id: 'assistant', href: '#/assistant', label: 'Assistant', icon: 'sparkle' },
+      { id: 'dashboard', href: '#/mon-espace', label: 'Mon espace', icon: 'user' }
+    ],
+    // Tant que le parcours n'est pas choisi, aucune rubrique n'est proposée.
+    onboarding: []
+  };
 
   var ROUTES = [
     { re: /^\/?$/, page: 'home', nav: 'home' },
@@ -29,7 +50,7 @@
     { re: /^\/laboratoire\/([a-z0-9-]+)\/?$/, page: 'lab', nav: 'lab', keys: ['lab'] },
     { re: /^\/defis\/?$/, page: 'challenges', nav: 'challenges' },
     { re: /^\/defis\/([a-z0-9-]+)\/?$/, page: 'challenge', nav: 'challenges', keys: ['module'] },
-    { re: /^\/progression\/?$/, page: 'progress', nav: 'dashboard' },
+    { re: /^\/progression\/?$/, page: 'progress', nav: 'progress' },
     { re: /^\/compte\/?$/, page: 'account', nav: 'dashboard' },
     { re: /^\/parcours\/?$/, page: 'spaces', nav: 'parcours' },
     { re: /^\/parcours\/([a-z0-9-]+)\/?$/, page: 'space', nav: 'parcours', keys: ['space'] },
@@ -40,6 +61,8 @@
     { re: /^\/attestation\/([a-z0-9-]+)\/?$/, page: 'attestation', nav: 'dashboard', keys: ['module'] },
     { re: /^\/assistant(?:\/([a-z0-9-]+))?\/?$/, page: 'assistant', nav: 'assistant', keys: ['module'] },
     { re: /^\/mon-espace\/?$/, page: 'dashboard', nav: 'dashboard' },
+    { re: /^\/bienvenue\/?$/, page: 'welcome', nav: 'dashboard' },
+    { re: /^\/changer-parcours\/?$/, page: 'trackChange', nav: 'dashboard' },
     { re: /^\/admin\/?$/, page: 'admin', nav: 'dashboard' },
     { re: /^\/connexion\/?$/, page: 'login', nav: 'login', fixed: { mode: 'login' } },
     { re: /^\/inscription\/?$/, page: 'login', nav: 'login', fixed: { mode: 'signup' } }
@@ -72,14 +95,7 @@
     };
   }
 
-  function render(force) {
-    var r = parse();
-
-    if (!force && r.path === currentPath) return;
-
-    var samePage = currentPath === r.path;
-    currentPath = r.path;
-
+  function clearPage() {
     if (cleanup) {
       try {
         cleanup();
@@ -88,14 +104,62 @@
       }
       cleanup = null;
     }
+  }
+
+  function showCatalogueLoading(main) {
+    main.innerHTML = '<div class="container page"><p class="loading" role="status"><span class="spinner" aria-hidden="true"></span>Chargement de vos contenus…</p></div>';
+
+    TCL.content.load().then(function () {
+      render(true);
+    }, function () {
+      main.innerHTML =
+        '<div class="container page page--narrow"><div class="callout callout--error">' +
+        '<h1 tabindex="-1">Vos contenus n’ont pas pu être chargés</h1>' +
+        '<p>Vérifiez votre connexion Internet, puis réessayez.</p>' +
+        '<p><button type="button" class="btn btn--primary" id="content-retry">Réessayer</button></p>' +
+        '</div></div>';
+
+      U.qs('#content-retry', main).addEventListener('click', function () {
+        render(true);
+      });
+    });
+  }
+
+  function render(force) {
+    var r = parse();
+
+    if (!force && r.path === currentPath) return;
+
+    var d = TCL.access.decide(r);
+
+    if (d && d.redirect) {
+      if (d.redirect !== '#' + r.path) {
+        root.location.replace(d.redirect);
+        return;
+      }
+      d = null;
+    }
+
+    var samePage = currentPath === r.path;
+    currentPath = r.path;
+
+    clearPage();
 
     var main = U.qs('#main');
-    var page = TCL.pages[r.route.page] || TCL.pages.notFound;
+
+    if (TCL.content.needed() && !TCL.content.ready()) {
+      showCatalogueLoading(main);
+      return;
+    }
+
+    var pageName = (d && d.page) || r.route.page;
+    var params = (d && d.params) || r.params;
+    var page = TCL.pages[pageName] || TCL.pages.notFound;
 
     main.classList.remove('is-entering');
 
     try {
-      cleanup = page.render(main, r.params) || null;
+      cleanup = page.render(main, params) || null;
     } catch (e) {
       console.error(e);
       main.innerHTML =
@@ -111,7 +175,7 @@
     document.title =
       (page.title
         ? (typeof page.title === 'function'
-          ? page.title(r.params)
+          ? page.title(params)
           : page.title) + ' · '
         : '') + 'TELECOM CONNECT LAB';
 
@@ -137,10 +201,46 @@
     document.body.dataset.ready = '1';
   }
 
+  /** Applique une redirection devenue nécessaire (profil chargé, session terminée…). */
+  function reroute() {
+    if (!document.body.dataset.ready) return;
+
+    var r = parse();
+    var d = TCL.access.decide(r);
+
+    if (d && d.redirect && d.redirect !== '#' + r.path) {
+      render(true);
+      return;
+    }
+
+    var waiting = document.querySelector('#track-loading');
+
+    if (waiting && TCL.access.track().state !== 'unknown') {
+      render(true);
+    }
+  }
+
   /* --------------------------------- En-tête --------------------------------- */
 
-  function buildHeader() {
-    var links = NAV.map(function (n) {
+  function navKey() {
+    if (TCL.auth.state().status === 'checking') return 'onboarding';
+    var mode = TCL.access.mode();
+    return mode === 'student' && TCL.access.track().state === 'missing' ? 'onboarding' : mode;
+  }
+
+  var builtNav = null;
+
+  function renderNav() {
+    var key = navKey();
+
+    if (key === builtNav) {
+      renderAuthNav();
+      return;
+    }
+
+    builtNav = key;
+
+    var links = NAVS[key].map(function (n) {
       return '<li><a class="nav__link" href="' + n.href +
         '" data-nav="' + n.id + '">' + I(n.icon) +
         '<span>' + n.label + '</span></a></li>';
@@ -149,6 +249,23 @@
     U.qs('#nav-list').innerHTML =
       links + '<li class="nav__auth" id="nav-auth"></li>';
 
+    renderAuthNav();
+    renderFooterLinks(key);
+    setActiveNav(parse().route.nav);
+  }
+
+  function renderFooterLinks(key) {
+    var el = U.qs('#footer-links');
+    if (!el) return;
+
+    var list = NAVS[key === 'onboarding' ? 'visitor' : key];
+
+    el.innerHTML = list.map(function (n) {
+      return '<li><a href="' + n.href + '">' + n.label + '</a></li>';
+    }).join('');
+  }
+
+  function buildHeader() {
     U.qs('#menu-toggle').addEventListener('click', function () {
       var open = document.body.classList.toggle('menu-open');
 
@@ -163,7 +280,7 @@
       if (e.key === 'Escape') closeMenu();
     });
 
-    renderAuthNav();
+    renderNav();
   }
 
   function closeMenu() {
@@ -178,8 +295,13 @@
   }
 
   function setActiveNav(id) {
+    var known = U.qsa('[data-nav]').some(function (a) {
+      return a.getAttribute('data-nav') === id;
+    });
+    var active = known ? id : 'dashboard';
+
     U.qsa('[data-nav]').forEach(function (a) {
-      var on = a.getAttribute('data-nav') === id;
+      var on = a.getAttribute('data-nav') === active;
 
       a.classList.toggle('is-active', on);
 
@@ -191,13 +313,15 @@
     });
   }
 
-  /* Bouton Connexion / Déconnexion selon l'état réel de la session. */
+  /* Boutons de session selon l'état réel de la session. */
 
   function renderAuthNav() {
     var host = U.qs('#nav-auth');
     if (!host) return;
 
     var st = TCL.auth.state();
+
+    host.classList.remove('nav__auth--pair');
 
     if (st.status === 'signedIn') {
       host.innerHTML =
@@ -209,10 +333,19 @@
       host.innerHTML =
         '<span class="nav__link nav__link--auth is-muted" aria-live="polite">' +
         I('clock') + '<span>Vérification…</span></span>';
-    } else {
+    } else if (st.status === 'disabled') {
       host.innerHTML =
         '<a class="nav__link nav__link--auth" href="#/connexion" data-nav="login">' +
         I('login') + '<span>Connexion</span></a>';
+
+      setActiveNav(parse().route.nav);
+    } else {
+      host.classList.add('nav__auth--pair');
+      host.innerHTML =
+        '<a class="nav__link nav__link--auth" href="#/connexion" data-nav="login">' +
+        I('login') + '<span>Connexion</span></a>' +
+        '<a class="nav__link nav__link--auth nav__link--cta" href="#/inscription">' +
+        '<span>Créer un compte</span></a>';
 
       setActiveNav(parse().route.nav);
     }
@@ -229,10 +362,10 @@
     TCL.auth.signOut().then(function () {
       U.toast('Vous êtes déconnecté.', 'info');
 
-      if (/^\/compte/.test(parse().path)) {
+      if (parse().path === '/') {
         render(true);
       } else {
-        root.location.hash = '#/compte';
+        root.location.hash = '#/';
       }
     });
   }
@@ -268,21 +401,24 @@
     el.textContent = txt;
   }
 
+  function showFlash() {
+    var f = TCL.auth.takeFlash();
+
+    if (f) U.toast(f.text, f.kind);
+  }
+
   /* --------------------------------- Démarrage --------------------------------- */
 
   function start() {
-    buildHeader();
-    U.qs('#footer-year').textContent = String(new Date().getFullYear());
-
     TCL.auth.beforeSignOut(function () {
-      return TCL.sync.beforeSignOut();
+      return TCL.sync.beforeSignOut().then(function () {
+        TCL.official.forget();
+      });
     });
 
     var lastUserId = null;
 
     TCL.auth.onChange(function (st) {
-      renderAuthNav();
-
       if (st.status === 'signedIn' && st.user && st.user.id !== lastUserId) {
         lastUserId = st.user.id;
         TCL.sync.start(st.user);
@@ -297,20 +433,33 @@
         TCL.official.setUser(null);
       }
 
+      renderNav();
       renderFooterStorage();
+
+      if (st.status !== 'checking') showFlash();
 
       if (
         document.body.dataset.ready &&
-        ['account', 'login', 'progress', 'spaces', 'space', 'competence', 'evaluations', 'dashboard'].indexOf(parse().route.page) >= 0
+        ['account', 'login', 'progress', 'spaces', 'space', 'competence', 'evaluations', 'dashboard', 'lessons', 'labs', 'challenges', 'home'].indexOf(parse().route.page) >= 0
       ) {
         render(true);
+      } else {
+        reroute();
       }
     });
 
     TCL.official.onChange(function () {
+      renderNav();
+
       var page = parse().route.page;
       var gated = page === 'admin' && !document.querySelector('#adm');
-      if (document.body.dataset.ready && (gated || ['spaces', 'space', 'competence', 'evaluations', 'dashboard', 'attestation'].indexOf(page) >= 0)) render(true);
+      var refreshed = ['spaces', 'space', 'competence', 'evaluations', 'dashboard', 'attestation', 'lessons', 'labs', 'challenges', 'progress', 'trackChange'];
+
+      if (document.body.dataset.ready && (gated || refreshed.indexOf(page) >= 0)) {
+        render(true);
+      } else {
+        reroute();
+      }
     });
 
     // Les formulaires des laboratoires se pilotent sans envoi de page.
@@ -319,6 +468,7 @@
     });
 
     TCL.sync.onChange(function () {
+      renderNav();
       renderFooterStorage();
 
       var el = U.qs('[data-sync-status]');
@@ -326,14 +476,17 @@
       if (el && TCL.pages.syncStatusHtml) {
         el.innerHTML = TCL.pages.syncStatusHtml();
       }
+
+      reroute();
     });
 
     TCL.store.subscribe(function (s, reason) {
-      if (
-        (reason === 'sync' || reason === 'scope') &&
-        ['progress', 'account'].indexOf(parse().route.page) >= 0
-      ) {
+      if (reason !== 'sync' && reason !== 'scope') return;
+
+      if (['progress', 'account', 'dashboard', 'lessons', 'labs', 'challenges'].indexOf(parse().route.page) >= 0) {
         render(true);
+      } else {
+        reroute();
       }
     });
 
@@ -344,16 +497,14 @@
     // Vérifier la session avant le premier affichage.
     var ready = TCL.auth.init();
 
+    buildHeader();
+    U.qs('#footer-year').textContent = String(new Date().getFullYear());
+
     ready.then(function () {
+      renderNav();
       render(true);
-    });
-
-    ready.then(function () {
       renderFooterStorage();
-
-      var f = TCL.auth.takeFlash();
-
-      if (f) U.toast(f.text, f.kind);
+      showFlash();
     });
   }
 

@@ -119,5 +119,47 @@ test('banque : variantes distinctes, QCM à bonne réponse unique, valeurs finie
   });
 });
 
+console.log('\nParcours');
+function ids(x) { return x.slice().sort(); }
+test('Licence 1 : ses modules, sans ceux des autres niveaux', function () {
+  var m = CUR.trackModules('l1', null);
+  assert.deepStrictEqual(ids(m.core), ['chaine', 'circuits', 'ip', 'signaux']); assert.deepStrictEqual(m.prerequisites, []);
+});
+test('Licence 2 : le prérequis venu d’un autre niveau est identifié à part', function () {
+  var m = CUR.trackModules('l2', null);
+  assert.ok(m.core.indexOf('fibre') >= 0 && m.core.indexOf('circuits') < 0); assert.deepStrictEqual(m.prerequisites, ['signaux']);
+});
+test('Licence 3 : mobiles et tous ses prérequis', function () {
+  assert.deepStrictEqual(ids(CUR.trackModules('l3', null).prerequisites), ['modulation', 'ondes-em', 'propagation', 'signaux']);
+});
+test('Master : aucun module disponible, aucun contenu présenté', function () { assert.deepStrictEqual(CUR.trackModules('master', null), { core: [], prerequisites: [] }); });
+test('spécialisation : restreint au métier, avec ses prérequis', function () {
+  var m = CUR.trackModules('pro', 'pro-fibre');
+  assert.deepStrictEqual(m.core, ['fibre']); assert.deepStrictEqual(ids(m.prerequisites), ['ondes-em', 'signaux']);
+  assert.deepStrictEqual(CUR.trackModules('pro', 'pro-iot').core, []);
+});
+test('fermeture des prérequis : chaque évaluation d’un parcours a ses prérequis dans ce parcours', function () {
+  CUR.trackList().forEach(function (t) { t.competencies.forEach(function (c) { CUR.competencies[c].prerequisites.forEach(function (p) { assert.ok(t.competencies.indexOf(p) >= 0, t.key + ' : ' + p); }); }); });
+});
+test('changement : monter exige l’entrée ; descendre, non', function () {
+  var r = CUR.checkMove({ space: 'l1' }, { space: 'l2' }, { circuits: {} });
+  assert.strictEqual(r.allowed, false); assert.deepStrictEqual(r.missing, ['signaux']); assert.ok(r.placements.some(function (p) { return p.id === 'placement-bases'; }));
+  assert.strictEqual(CUR.checkMove({ space: 'l1' }, { space: 'l2' }, { circuits: {}, signaux: {} }).allowed, true);
+  assert.strictEqual(CUR.checkMove({ space: 'l3' }, { space: 'l1' }, {}).allowed, true);
+  assert.strictEqual(CUR.checkMove({ space: 'l1' }, { space: 'pro' }, {}).allowed, true);
+  assert.strictEqual(CUR.checkMove({ space: 'pro' }, { space: 'l1' }, {}).allowed, false);
+  assert.strictEqual(CUR.checkMove({ space: 'l1' }, { space: 'l1' }, {}).same, true);
+});
+test('chaque niveau reste atteignable : l’entrée vient du niveau précédent ou d’un positionnement', function () {
+  var order = ['preparatoire', 'l1', 'l2', 'l3', 'master'];
+  order.slice(1).forEach(function (s, i) {
+    var previous = CUR.trackList().filter(function (t) { return t.key === order[i]; })[0].competencies;
+    CUR.spaceById(s).entry.forEach(function (c) {
+      var viaPlacement = CUR.placements.some(function (p) { return p.grants.indexOf(c) >= 0; });
+      assert.ok(previous.indexOf(c) >= 0 || viaPlacement, s + ' : ' + c);
+    });
+  });
+});
+
 console.log('\n' + passed + ' tests réussis, ' + failed + ' échec(s).');
 process.exit(failed ? 1 : 0);

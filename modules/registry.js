@@ -107,10 +107,16 @@
     };
   }
 
-  /** Progression générale : somme de toutes les activités de tous les modules disponibles. */
-  function overallProgress(state) {
+  /** Modules visibles : tous, ou ceux du parcours de l'étudiant. */
+  function scoped(list) {
+    var f = TCL.access && TCL.access.moduleFilter();
+    return f ? list.filter(function (m) { return f(m.id); }) : list;
+  }
+
+  /** Progression générale : somme des activités des modules disponibles (ou de la liste ids). */
+  function overallProgress(state, ids) {
     var acc = { done: 0, total: 0, chaptersDone: 0, chaptersTotal: 0, missionsDone: 0, missionsTotal: 0, exAttempted: 0, exMastered: 0, exTotal: 0, modulesComplete: 0, lessonsComplete: 0, modules: 0 };
-    modules.forEach(function (m) {
+    (ids ? modules.filter(function (m) { return ids.indexOf(m.id) >= 0; }) : scoped(modules)).forEach(function (m) {
       if (statusOf(m) === 'planned') return;
       var p = moduleProgress(state, m.id);
       acc.modules++;
@@ -142,9 +148,10 @@
     moduleProgress: moduleProgress,
     overallProgress: overallProgress,
     labProgress: labProgress,
-    withLesson: function () { return modules.filter(function (m) { return liveParts(m).lesson; }); },
-    withLab: function () { return modules.filter(function (m) { return liveParts(m).lab; }); },
-    withExercises: function () { return modules.filter(function (m) { return liveParts(m).exercises; }); },
+    scopedModules: function () { return scoped(modules); },
+    withLesson: function () { return scoped(modules).filter(function (m) { return liveParts(m).lesson; }); },
+    withLab: function () { return scoped(modules).filter(function (m) { return liveParts(m).lab; }); },
+    withExercises: function () { return scoped(modules).filter(function (m) { return liveParts(m).exercises; }); },
     available: function () { return modules.filter(function (m) { return statusOf(m) === 'available'; }); },
     planned: function () { return modules.filter(function (m) { return statusOf(m) !== 'available'; }); },
     labPlanned: function () { return modules.filter(function (m) { return !liveParts(m).lab; }); }

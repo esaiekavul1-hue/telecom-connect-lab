@@ -218,9 +218,17 @@ function loadSession() {
     refreshTimer = setTimeout(function () { refresh().catch(function () { /* traité dans refresh */ }); }, Math.min(ms, 2147000000));
   }
 
+  /** Coupure ou panne du service : la session reste valable et sera renouvelée plus tard. */
+  function isTemporary(err) { return !!err && (err.code === 'network' || err.code === 'server' || err.code === 'rate_limit'); }
+
+  var refreshing = null;
+
+  /* Un jeton de renouvellement ne sert qu'une fois : les appels simultanés partagent la même demande. */
   function refresh() {
     if (!session) return Promise.reject(new AuthError('no_session', 'Aucune session.'));
-    return request('/auth/v1/token', { query: { grant_type: 'refresh_token' }, body: { refresh_token: session.refresh_token } })
+    if (refreshing) return refreshing;
+    var done = function () { refreshing = null; };
+    refreshing = request('/auth/v1/token', { query: { grant_type: 'refresh_token' }, body: { refresh_token: session.refresh_token } })
       .then(function (data) {
         var s = normalizeSession(data);
         if (!s) throw new AuthError('unknown', 'Réponse inattendue du service.');
@@ -231,19 +239,21 @@ function loadSession() {
         return s;
       })
       .catch(function (err) {
-        if (err.code === 'network') {
-          // Hors ligne : la session reste valable jusqu'à son expiration.
-          setState({ offline: true });
-          if (session.expires_at <= nowSec()) { endSession(); }
-          else { refreshTimer = setTimeout(function () { refresh().catch(function () {}); }, 30000); }
+        if (isTemporary(err)) {
+          if (state.status === 'signedIn') setState({ offline: true });
+          clearTimeout(refreshTimer);
+          refreshTimer = setTimeout(function () { refresh().catch(function () {}); }, 30000);
         } else {
-          endSession();
+          endSession(true);
         }
         throw err;
       });
+    refreshing.then(done, done);
+    return refreshing;
   }
 
-  function endSession() {
+  function endSession(expired) {
+    if (expired === true) flash = { kind: 'info', text: 'Votre session a expiré. Reconnectez-vous pour retrouver votre espace : votre progression est conservée.' };
     clearTimeout(refreshTimer);
     saveSession(null);
     setState({ status: 'signedOut', user: null, offline: false });
@@ -338,8 +348,9 @@ function loadSession() {
     if (!/(^#|&)(access_token|error)=/.test(h)) return null;
     var params = new URLSearchParams(h.replace(/^#\/?/, ''));
     var clean = function () {
-      try { root.history.replaceState(null, '', root.location.pathname + root.location.search + '#/compte'); }
-      catch (e) { root.location.hash = '#/compte'; }
+      var target = params.get('error') ? '#/connexion' : '#/mon-espace';
+      try { root.history.replaceState(null, '', root.location.pathname + root.location.search + target); }
+      catch (e) { root.location.hash = target; }
     };
     if (params.get('error')) {
       clean();
@@ -379,19 +390,22 @@ function loadSession() {
       ? fetchUser(stored.access_token).then(function (u) {
           session.user = u; saveSession(session); scheduleRefresh();
           setState({ status: 'signedIn', user: publicUser(u), offline: false });
-        })
+        }).catch(function (err) { if (isTemporary(err)) throw err; return refresh(); })
       : refresh();
     return p.then(function () { return state; }).catch(function (err) {
-      if (err.code === 'network' && session && session.expires_at > nowSec()) {
-        // Session émise par le service et encore valide : utilisable hors ligne, signalée comme telle.
-        scheduleRefresh();
+      if (isTemporary(err) && session) {
+        // Le service est injoignable : la session n'est pas invalide pour autant. On reste connecté,
+        // sur les données de cet appareil, et le renouvellement reprendra au retour du réseau.
+        if (session.expires_at > nowSec()) scheduleRefresh();
         setState({ status: 'signedIn', user: publicUser(session.user), offline: true });
       } else if (state.status !== 'signedOut') {
-        endSession();
+        endSession(true);
       }
       return state;
     });
   }
+
+  root.addEventListener('online', function () { if (session && state.offline) refresh().catch(function () {}); });
 
   TCL.auth = {
     init: init,

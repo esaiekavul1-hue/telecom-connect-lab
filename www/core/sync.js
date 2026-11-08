@@ -79,7 +79,8 @@
       set({ state: 'synced', message: '', lastSyncedAt: new Date().toISOString() });
       return true;
     }).catch(function (err) {
-      set({ state: err && err.kind === 'network' ? 'offline' : 'error', message: (err && err.message) || 'Synchronisation impossible.' });
+      var temporary = err && (err.kind === 'network' || err.code === 'network' || err.code === 'server');
+      set({ state: temporary ? 'offline' : 'error', message: temporary ? 'Hors ligne : la progression est conservée sur cet appareil et sera synchronisée au retour de la connexion.' : (err && err.message) || 'Synchronisation impossible.' });
       return false;
     }).then(function (ok) {
       running = null;

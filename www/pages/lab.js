@@ -25,7 +25,7 @@
       var info = labInfo(m.id), p = TCL.registry.labProgress(st, m.id);
       var opened = !!(st.lab[m.id] && st.lab[m.id].params);
       return '<article class="lab-card"><div class="lab-card__visual" data-thumb="' + m.id + '"></div><div class="lab-card__body">' +
-        '<p class="lab-card__badges"><span class="badge badge--live">Disponible</span><span class="badge badge--skill">' + esc(m.title) + '</span></p>' +
+        '<p class="lab-card__badges"><span class="badge badge--live">Disponible</span><span class="badge badge--skill">' + esc(m.title) + '</span>' + P.trackTag(m.id) + '</p>' +
         '<h2><a href="#/laboratoire/' + m.id + '">' + esc(info.title) + '</a></h2>' +
         '<p>' + esc(info.summary) + '</p>' +
         '<p class="card__meta">Missions réussies : ' + p.missionsDone + ' / ' + p.missionsTotal + '</p>' +
@@ -37,10 +37,10 @@
       return '<li class="soon">' + I(m.icon) + '<div><h4>' + esc(m.title) + '</h4><p>Simulation en cours de développement.</p></div><span class="badge badge--soon">En préparation</span></li>';
     }).join('');
     main.innerHTML = '<div class="container page">' + P.crumbs([{ label: 'Mon laboratoire' }]) +
-      P.head('Mon laboratoire', 'Manipulez les paramètres techniques et observez immédiatement leurs effets. Chaque simulation se termine par de courtes missions pour vérifier votre compréhension.') +
-      '<div class="lab-list">' + cards +
+      P.head('Mon laboratoire', 'Manipulez les paramètres techniques et observez immédiatement leurs effets. Chaque simulation se termine par de courtes missions pour vérifier votre compréhension.') + P.trackBanner() +
+      P.trackEmpty(labs.length) + '<div class="lab-list">' + cards +
       (soon ? '<section aria-labelledby="soon-labs"><h2 class="h-sub" id="soon-labs">Prochaines simulations</h2><ul class="soon-list">' + soon + '</ul></section>' : '') +
-      '</div></div>';
+      '</div>' + P.trackPlanned() + '</div>';
     var mounted = [];
     U.qsa('[data-thumb]', main).forEach(function (el) {
       var info = labInfo(el.getAttribute('data-thumb'));

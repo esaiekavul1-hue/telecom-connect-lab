@@ -1,6 +1,7 @@
 /*
- * TELECOM CONNECT LAB 2.0 — Parcours V2 dans un vrai navigateur, contre le
- * serveur local (vraies migrations SQL dans PostgreSQL WASM).
+ * TELECOM CONNECT LAB 2.0 — Parcours V2 dans un vrai navigateur.
+ * Serveur LOCAL uniquement : vraies migrations SQL dans PostgreSQL (WASM),
+ * connexion simulée. Ce n'est pas une validation du service Supabase réel.
  * Lancement : node tests/e2e-v2.js     (SHOTS_DIR=dossier pour des captures)
  */
 'use strict';
@@ -11,28 +12,41 @@ var dev = require('../tools/dev-server.js');
 
 var SHOTS = process.env.SHOTS_DIR || null;
 var results = [];
-function ok(name, cond, detail) { results.push(!!cond); console.log((cond ? '  ✔ ' : '  ✘ ') + name + (cond || !detail ? '' : '  → ' + String(detail).slice(0, 400))); }
+function ok(name, cond, detail) { results.push(!!cond); console.log((cond ? '  ✔ ' : '  ✘ ') + name + (cond || detail == null ? '' : '  → ' + String(detail).slice(0, 400))); }
 async function shot(p, n) { if (SHOTS) await p.screenshot({ path: path.join(SHOTS, n + '.png'), fullPage: true }); }
 var text = async function (p, s) { return (await p.textContent(s)) || ''; };
 
-var S;
+var S, errs = [];
 function get(u) { return new Promise(function (r, j) { http.get(u, function (res) { var d = ''; res.on('data', function (x) { d += x; }); res.on('end', function () { r(JSON.parse(d || 'null')); }); }).on('error', j); }); }
 function post(u) { return new Promise(function (r) { var q = http.request(u, { method: 'POST' }, function (res) { res.resume(); res.on('end', r); }); q.end(); }); }
 async function go(p, h) { await p.goto(S.site + '#/' + h); await p.waitForTimeout(350); }
+function watch(p) {
+  p.on('pageerror', function (e) { errs.push('pageerror: ' + e.message); });
+  p.on('console', function (m) { if (m.type() === 'error' && !/Failed to load resource|net::ERR/.test(m.text())) errs.push(m.text()); });
+}
+async function waitHash(p, h) { await p.waitForFunction(function (x) { return location.hash === x; }, h, { timeout: 8000 }); await p.waitForTimeout(250); }
+async function newPage(browser, width) { var c = await browser.newContext({ viewport: { width: width || 1360, height: 900 } }); var p = await c.newPage(); watch(p); return { ctx: c, page: p }; }
+function hash(p) { return p.evaluate(function () { return location.hash; }); }
 
 async function login(p, email, name) {
   await post(S.api + '/__test/reset-rate');
-  await go(p, 'inscription');
-  if (name && await p.$('#f-name')) await p.fill('#f-name', name);
+  await go(p, name ? 'inscription' : 'connexion');
+  if (name) await p.fill('#f-name', name);
   await p.fill('#f-email', email);
-  if (await p.$('#f-consent')) await p.check('#f-consent');
   await p.click('#email-form button[type=submit]');
   await p.waitForSelector('#f-code', { timeout: 8000 });
   var mail = await get(S.api + '/__test/outbox?email=' + encodeURIComponent(email));
   await p.fill('#f-code', mail.code);
   await p.click('#code-form button[type=submit]');
   await p.waitForFunction(function () { return /Déconnexion/.test(document.querySelector('#nav-auth').textContent); }, null, { timeout: 8000 });
-  await p.waitForTimeout(500);
+  await p.waitForTimeout(700);
+}
+async function chooseTrack(p, space, spec) {
+  await p.waitForSelector('#track-form', { timeout: 8000 });
+  await p.check('input[name=track][value=' + space + ']');
+  if (spec) await p.selectOption('#spec', spec);
+  await p.click('#track-ok');
+  await waitHash(p, '#/mon-espace');
 }
 
 async function correct(att, position) {
@@ -54,202 +68,362 @@ async function answerAll(p, email, n, good) {
   await p.waitForFunction(function () { return /Réponses enregistrées/.test(document.querySelector('#esave').textContent); }, null, { timeout: 5000 });
   await p.waitForTimeout(700);
 }
+async function finishExam(p) { p.once('dialog', function (d) { d.accept(); }); await p.click('#finish'); await p.waitForSelector('.result', { timeout: 8000 }); await p.waitForTimeout(400); }
+async function profileOf(email) { return (await S.db.db.query('select p.space, p.specialization from public.profiles p join auth.users u on u.id = p.id where u.email = $1', [email])).rows[0]; }
+function rpcResult(p, name, args) { return p.evaluate(function (a) { return TCL.api.rpc(a.n, a.x).then(function () { return 'OK'; }, function (e) { return e.message; }); }, { n: name, x: args }); }
 
 (async function () {
   S = await dev.start({ sitePort: 8791, apiPort: 54391 });
   var browser = await chromium.launch();
-  var ctx = await browser.newContext({ viewport: { width: 1360, height: 900 } });
-  var errs = [];
-  var p = await ctx.newPage();
-  p.on('pageerror', function (e) { errs.push('pageerror: ' + e.message); });
-  p.on('console', function (m) { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs.push(m.text()); });
-  page = p;
+  var d = await newPage(browser), p = d.page, dialogs = 0;
+  p.on('dialog', function () { dialogs++; });
 
-  console.log('\nVisiteur');
-  await go(p, 'parcours');
-  ok('six espaces affichés', (await p.$$('.space-card')).length === 6);
-  ok('invitation à se connecter', /Connectez-vous/.test(await text(p, 'main')));
-  await shot(p, '01-parcours');
-  await go(p, 'parcours/master');
-  ok('Master : tous les cours marqués « à développer », rien de présenté comme disponible', (await p.$$('.course--planned')).length === 7 && (await p.$$('.mod-row')).length === 0);
-  await go(p, 'parcours/l2');
-  ok('L2 : cours disponibles reliés aux modules réels', (await p.$$('.mod-row')).length >= 6);
-  await shot(p, '02-l2');
-  await go(p, 'laboratoire/circuits');
-  ok('laboratoire Circuits : schéma, 5 missions, limites', (await p.$$('#schema svg')).length === 1 && (await p.$$('.mission')).length === 5 && /Limites/.test(await text(p, 'main')));
-  var u = await text(p, '#r-u');
-  ok('valeur initiale calculée : 12 V, R1 = R2 → 6 V', /^6 V/.test(u), u);
-  await p.fill('#in-E', '30'); await p.fill('#in-R1', '100'); await p.fill('#in-R2', '100'); await p.waitForTimeout(150);
-  ok('surcharge détectée (30 V sur 200 Ω : 1,13 W)', /Surcharge/.test(await text(p, '#verdict')));
-  await p.click('[data-id=m4]'); await p.waitForTimeout(100);
-  ok('mission surcharge réussie', /Réussi/.test(await text(p, '#fb-m4')));
-  await shot(p, '03-labo-circuits');
-  await go(p, 'evaluations');
-  ok('évaluations : connexion requise', /compte/.test(await text(p, 'main')));
-  await go(p, 'assistant');
-  ok('assistant : connexion requise', /nécessite un compte/.test(await text(p, 'main')));
+  console.log('\nVisiteur : découverte publique');
+  await go(p, '');
+  var home = await text(p, 'main');
+  ok('accueil : Découvrir, Créer un compte, Se connecter', await p.isVisible('.hero__actions >> text=Découvrir') && await p.isVisible('.hero__actions >> text=Créer un compte') && await p.isVisible('.hero__actions >> text=Se connecter'));
+  ok('accueil : objectifs, six parcours, avantages, fonctionnement', (await p.$$('.space-card')).length === 6 && /Notre objectif/.test(home) && /Conçue pour vos conditions/.test(home) && /Comment ça marche/.test(home));
+  ok('accueil : aucune fonction d’IA annoncée alors qu’elle n’est pas connectée', !/Assistant/.test(home));
+  var nav = (await p.$$eval('#nav-list .nav__link:not(.nav__link--auth)', function (a) { return a.map(function (x) { return x.textContent; }); })).join(',');
+  ok('navigation publique conservée : Accueil, Leçons, Laboratoire, Défis, Progression', nav === 'Accueil,Leçons,Laboratoire,Défis,Progression', nav);
+  ok('le catalogue complet n’est pas téléchargé par un visiteur', await p.evaluate(function () { return !performance.getEntriesByType('resource').some(function (r) { return /modules\/(fibre|ip|antennes|signaux\/lesson)/.test(r.name); }) && !(window.TCL.lessons && TCL.lessons.fibre); }));
+  await shot(p, '01-accueil-public');
 
-  console.log('\nÉtudiant');
+  await go(p, 'lecons');
+  ok('Leçons : une seule leçon ouverte', (await p.$$('.card--live')).length === 1 && /La loi d’Ohm/.test(await text(p, 'main')));
+  await go(p, 'lecons/decouverte');
+  var words = (await text(p, '.lesson__body')).split(/\s+/).length;
+  ok('leçon de démonstration réelle : formule, figures, exemple chiffré', /La loi d’Ohm/.test(await text(p, 'main h1')) && (await p.$$('.lesson__body figure svg')).length === 2 && /25|mA/.test(await text(p, '.lesson__body')) && words > 180, words);
+  await shot(p, '02-lecon-demo');
+  var blocked = [];
+  for (var g of ['lecons/fibre', 'lecons/fibre/c1', 'laboratoire/fibre', 'defis/fibre', 'evaluations', 'evaluations/final-ip', 'assistant', 'mon-espace', 'parcours/l2', 'competence/ip', 'admin', 'bienvenue']) {
+    await go(p, g);
+    if (!/Réservé aux étudiants inscrits/.test(await text(p, 'main'))) blocked.push(g);
+  }
+  ok('accès direct au catalogue et aux espaces personnels refusé', blocked.length === 0, blocked.join(' '));
+
+  await go(p, 'laboratoire/decouverte');
+  await p.fill('#in-U', '12'); await p.fill('#in-R', '100'); await p.waitForTimeout(150);
+  ok('simulation : 12 V sur 100 Ω → 120 mA, 1,44 W, surcharge signalée', /^120 mA/.test(await text(p, '#r-i')) && /^1,44 W/.test(await text(p, '#r-p')) && /0,25 W/.test(await text(p, '#verdict')), await text(p, '#r-i'));
+  await p.fill('#in-U', '5'); await p.fill('#in-R', '1000'); await p.waitForTimeout(150);
+  ok('simulation : 5 V sur 1 000 Ω → 5 mA, 25 mW, sans alerte', /^5 mA/.test(await text(p, '#r-i')) && /^25 mW/.test(await text(p, '#r-p')) && /dans les limites/.test(await text(p, '#verdict')), await text(p, '#r-p'));
+  ok('simulation : hypothèses et limites affichées', /Limites/.test(await text(p, 'main')));
+  await shot(p, '03-labo-demo');
+
+  await go(p, 'defis/decouverte');
+  await p.fill('#ans-num', '1'); await p.click('#qform button[type=submit]'); await p.waitForTimeout(100);
+  ok('mini-défi : réponse fausse corrigée et expliquée immédiatement', /Réponse incorrecte/.test(await text(p, '#qfb')) && /Explication/.test(await text(p, '#qfb')));
+  await p.click('#demo-next');
+  await p.check('input[name=ans][value=a]'); await p.click('#qform button[type=submit]'); await p.waitForTimeout(100);
+  ok('mini-défi : bonne réponse reconnue', /Bonne réponse/.test(await text(p, '#qfb')));
+  await p.click('#demo-next');
+  await p.fill('#ans-num', '9,4'); await p.click('#qform button[type=submit]'); await p.waitForTimeout(100);
+  await p.click('#demo-next');
+  ok('mini-défi : résultat sans validation officielle', /2.*\/ 3/.test(await text(p, '.result__score')) && /ne vaut pas validation/.test(await text(p, 'main')), await text(p, 'main'));
+  ok('démonstration : rien n’est enregistré sur l’appareil', await p.evaluate(function () { var g = localStorage.getItem('tcl.progress.guest'); return !g || !/decouverte/.test(g); }));
+
+  await go(p, 'progression');
+  var kpi = await p.$$eval('.kpi__value', function (a) { return a.map(function (x) { return x.textContent; }); });
+  ok('Progression : aperçu explicite, aucun résultat inventé', /aucune donnée réelle/.test(await text(p, 'main')) && kpi.length === 5 && kpi.every(function (v) { return v === '—'; }), kpi.join());
+  ok('aucune fenêtre d’inscription intrusive', dialogs === 0 && (await p.$$('.modal, [role=dialog]')).length === 0);
+  await shot(p, '04-progression-apercu');
+
+  console.log('\nNouveau compte : choix unique du parcours');
   var email = 'etudiant@exemple.org';
   await login(p, email, 'Etudiant Test');
-  await go(p, 'mon-espace');
-  ok('Mon espace : statistiques réelles et prochaines étapes', (await p.$$('.stat')).length === 4 && (await p.$$('.recs li')).length > 0, await text(p, 'main'));
-  await p.selectOption('#my-space', 'l2'); await p.waitForTimeout(600);
-  ok('choix de l’espace enregistré sur le serveur', /Licence 2/.test(await text(p, '.page-head')));
-  await shot(p, '04-mon-espace');
+  await waitHash(p, '#/bienvenue');
+  ok('après inscription : six parcours proposés', (await p.$$('input[name=track]')).length === 6);
+  ok('rubriques masquées tant que le parcours n’est pas choisi', (await p.$$('#nav-list .nav__link:not(.nav__link--auth)')).length === 0);
+  await shot(p, '05-choix-parcours');
+  await p.goto(S.site + '#/lecons'); await waitHash(p, '#/bienvenue');
+  ok('impossible de contourner le choix', true);
+  await p.check('input[name=track][value=pro]');
+  ok('Monde professionnel : spécialisations proposées', await p.isVisible('#spec') && (await p.$$('#spec option')).length === 9);
+  await p.check('input[name=track][value=l1]');
+  ok('spécialisations masquées pour les autres parcours', !(await p.isVisible('#spec')));
+  await p.click('#track-ok');
+  await waitHash(p, '#/mon-espace');
+  ok('parcours enregistré dans le profil serveur', (await profileOf(email)).space === 'l1');
+  await p.waitForTimeout(300);
+  var dash = await text(p, 'main');
+  ok('tableau de bord : bienvenue, parcours, progression, reprise, recommandations, labos, compétences, résultats', /Bonjour, Etudiant Test/.test(dash) && /Licence 1/.test(dash) && await p.isVisible('#continue') && /Continuer mon apprentissage/.test(dash) && /Prochaines activités/.test(dash) && /Mes laboratoires/.test(dash) && /Compétences acquises/.test(dash) && /Résultats des évaluations/.test(dash) && (await p.$$('.stat')).length === 4, dash.slice(0, 300));
+  await shot(p, '06-tableau-de-bord');
+  var nav2 = (await p.$$eval('#nav-list .nav__link:not(.nav__link--auth)', function (a) { return a.map(function (x) { return x.textContent; }); })).join(',');
+  ok('navigation étudiante adaptée', nav2 === 'Mon espace,Mes leçons,Mon laboratoire,Mes défis,Évaluations,Assistant,Ma progression', nav2);
 
-  await go(p, 'assistant/circuits');
-  await p.waitForTimeout(400);
-  ok('assistant sans fournisseur : annonce « non connecté », saisie bloquée, aucune réponse simulée', /non connecté/.test(await text(p, '#ai-status')) && await p.isDisabled('#ai-input') && (await p.$$('.bubble')).length === 0);
-  await shot(p, '05-assistant');
+  console.log('\nSession');
+  await p.reload(); await p.waitForTimeout(800);
+  ok('actualisation : toujours sur le tableau de bord, sans nouvelle sélection', (await hash(p)) === '#/mon-espace' && /Licence 1/.test(await text(p, 'main')));
+  var again = await d.ctx.newPage(); watch(again);
+  await again.goto(S.site); await waitHash(again, '#/mon-espace');
+  ok('réouverture de l’application : accès direct à son espace', /Bonjour/.test(await text(again, 'main h1')));
+  await again.close();
 
+  console.log('\nContenus filtrés selon le parcours');
+  await go(p, 'lecons');
+  var mods = (await p.$$eval('.card[data-module]', function (a) { return a.map(function (x) { return x.getAttribute('data-module'); }); })).sort().join(',');
+  ok('Leçons : uniquement les modules de L1', mods === 'chaine,circuits,ip,signaux', mods);
+  ok('Leçons : contenus en développement identifiés', (await p.$$('.soon')).length === 3 && /En cours de développement/.test(await text(p, 'main')));
+  await shot(p, '07-lecons-l1');
+  await go(p, 'laboratoire');
+  ok('Laboratoires : uniquement ceux de L1', (await p.$$('.lab-card')).length === 4);
+  await go(p, 'defis');
+  ok('Défis : uniquement ceux de L1', (await p.$$('.card[data-module]')).length === 4);
   await go(p, 'evaluations');
-  ok('évaluations : positionnement et modules listés', (await p.$$('.exam-row')).length === 14, (await p.$$('.exam-row')).length);
-  await go(p, 'evaluations/final-ondes-em');
-  await p.click('#start'); await p.waitForTimeout(400);
-  ok('prérequis non validé : le serveur refuse, message clair', /Prérequis non validés/.test(await text(p, '#start-err')), await text(p, '#start-err'));
+  ok('Évaluations : L1 et tests de positionnement', (await p.$$('.exam-row')).length === 8, (await p.$$('.exam-row')).length);
+  await go(p, 'assistant');
+  ok('Assistant : modules du parcours', (await p.$$('#ai-mod option')).length === 5);
+  var off = [];
+  for (var o of ['lecons/fibre', 'lecons/fibre/c1', 'laboratoire/mobiles', 'defis/antennes', 'competence/modulation', 'evaluations/final-fibre']) {
+    await go(p, o);
+    if (!/Hors de votre parcours/.test(await text(p, 'main h1'))) off.push(o);
+  }
+  ok('module hors parcours : page explicative, pas de contenu', off.length === 0, off.join(' '));
+  await go(p, 'parcours');
+  ok('Mon parcours : uniquement les cours de L1', /Mon parcours : Licence 1/.test(await text(p, 'main h1')) && (await p.$$('.course')).length === 6);
 
+  console.log('\nContrôles côté serveur');
+  await go(p, 'mon-espace');
+  ok('évaluation hors parcours refusée par le serveur, même en appel direct', /ne fait pas partie/.test(await rpcResult(p, 'start_attempt', { p_assessment: 'final-fibre' })));
+  ok('second choix initial refusé', /déjà enregistré/.test(await rpcResult(p, 'choose_initial_track', { p_space: 'l3', p_specialization: null })));
+  var patched = await p.evaluate(function () { return TCL.api.update('profiles?id=eq.' + TCL.auth.state().user.id, { space: 'master' }).then(function () { return 'OK'; }, function (e) { return e.kind; }); });
+  ok('écrire directement son parcours : refusé', patched === 'forbidden' && (await profileOf(email)).space === 'l1', patched);
+  ok('changer de niveau sans prérequis : refusé', /à valider avant ce parcours/.test(await rpcResult(p, 'change_track', { p_space: 'l3', p_specialization: null })));
+  ok('prérequis d’une évaluation du parcours appliqué', /Prérequis non validés/.test(await rpcResult(p, 'start_attempt', { p_assessment: 'final-chaine' })));
   await p.evaluate(function () {
     var k = Object.keys(localStorage).filter(function (x) { return /^tcl\.official/.test(x); })[0];
-    var c = JSON.parse(localStorage.getItem(k)); c.validated.signaux = { source: 'assessment', validated_at: '2026-01-01' }; localStorage.setItem(k, JSON.stringify(c));
+    var c = JSON.parse(localStorage.getItem(k)); c.validated.signaux = { source: 'assessment', validated_at: '2026-01-01' }; c.profile.space = 'l3'; localStorage.setItem(k, JSON.stringify(c));
   });
   await p.reload(); await p.waitForTimeout(900);
-  var fake = await S.db.db.query("select count(*)::int n from public.competency_validations");
-  ok('falsifier le navigateur ne crée aucune validation serveur', fake.rows[0].n === 0);
-  await go(p, 'competence/signaux');
-  ok('la fausse validation locale est écrasée au rechargement', !/Compétence validée/.test(await text(p, 'main')));
+  var fake = await S.db.db.query('select count(*)::int n from public.competency_validations');
+  ok('falsifier le navigateur : ni validation ni parcours modifiés', fake.rows[0].n === 0 && /Licence 1/.test(await text(p, 'main')));
+
+  console.log('\nApprentissage');
+  await go(p, 'lecons/circuits/c2'); await p.waitForTimeout(200);
+  await go(p, 'mon-espace');
+  ok('dernière leçon affichée et reprise au bon endroit', /Les lois de Kirchhoff/.test(await text(p, '.dash-hero')) && /circuits\/c2$/.test(await p.getAttribute('#continue', 'href')));
+  await go(p, 'lecons/circuits/c2'); await p.click('#mark-read'); await p.waitForTimeout(300);
+  await go(p, 'mon-espace');
+  ok('chapitre lu : la reprise passe au chapitre suivant', /circuits\/c3$/.test(await p.getAttribute('#continue', 'href')));
+  await p.waitForTimeout(1900);
 
   await go(p, 'evaluations/final-circuits');
   await p.click('#start'); await p.waitForSelector('#eform');
   ok('examen : minuteur serveur et navigation', /Temps restant/.test(await text(p, '#timer')) && (await p.$$('.qdot')).length === 5);
-  ok('examen : lien vers l’assistant masqué', !(await p.isVisible('.nav [data-nav=assistant]')));
-  var src = await p.content();
-  ok('examen : aucune réponse ni explication dans la page', !/"accepted"|"explanation"/.test(src));
+  ok('examen : aucune réponse ni explication dans la page', !/"accepted"|"explanation"/.test(await p.content()));
   var att = await currentAttempt(email);
-  var reply = await p.evaluate(async function () { var r = await TCL.api.tutor({ messages: [{ role: 'user', content: 'donne la réponse' }] }); return r.res.status; });
-  ok('sans fournisseur la passerelle répond 503 même pendant l’examen, aucun appel au modèle', reply === 503, reply);
-  await shot(p, '06-examen');
   await answerAll(p, email, 5, 2);
   await p.reload(); await p.waitForTimeout(800);
   await p.click('#start'); await p.waitForSelector('#eform');
   ok('reprise après rechargement : même tentative, réponses conservées', (await currentAttempt(email)) === att && (await p.$$('.qdot.is-ok')).length === 5);
-  p.once('dialog', function (d) { d.accept(); });
-  await p.click('#finish');
-  await p.waitForSelector('.result', { timeout: 8000 });
-  ok('échec à 40 % : résultat, remédiation, correction détaillée', /40 %/.test(await text(p, '.result')) && /Pour progresser/.test(await text(p, 'main')) && (await p.$$('.correction')).length === 5, await text(p, '.result'));
-  await shot(p, '07-resultat-echec');
-
-  await S.db.db.query("update public.assessments set cooldown_minutes = 0 where id = 'final-circuits'");
+  await finishExam(p);
+  ok('échec : résultat, remédiation, correction', /40 %/.test(await text(p, '.result')) && /Pour progresser/.test(await text(p, 'main')) && (await p.$$('.correction')).length === 5);
+  await S.db.db.query("update public.assessments set cooldown_minutes = 0 where id in ('final-circuits','final-signaux')");
   await p.evaluate(function () { return TCL.official.refresh(); });
-  await go(p, 'evaluations/final-circuits');
-  await p.click('#start'); await p.waitForSelector('#eform');
+  await go(p, 'evaluations/final-circuits'); await p.click('#start'); await p.waitForSelector('#eform');
   await answerAll(p, email, 5, 5);
-  p.once('dialog', function (d) { d.accept(); });
-  await p.click('#finish');
-  await p.waitForSelector('.result', { timeout: 8000 });
-  ok('réussite à 100 %', /100 %/.test(await text(p, '.result')) && /réussie/.test(await text(p, '.result h1')));
-  await p.waitForTimeout(500);
-  await go(p, 'competence/circuits');
-  ok('compétence validée et attestation proposée', /Compétence validée/.test(await text(p, 'main')));
+  await finishExam(p);
+  ok('réussite : compétence validée par le serveur', /100 %/.test(await text(p, '.result')));
   await go(p, 'attestation/circuits');
-  ok('attestation clairement interne, sans valeur de diplôme', /Attestation interne/.test(await text(p, 'main')) && /ni un diplôme/.test(await text(p, 'main')) && /Etudiant Test/.test(await text(p, 'main')));
-  await shot(p, '08-attestation');
+  ok('attestation clairement interne', /Attestation interne/.test(await text(p, 'main')) && /ni un diplôme/.test(await text(p, 'main')));
+
+  console.log('\nDéconnexion, reconnexion, autre appareil');
+  var saw = [];
+  p.on('framenavigated', function (f) { saw.push(f.url()); });
+  await go(p, 'mon-espace');
+  await p.waitForTimeout(1800);
+  await p.click('#btn-signout'); await waitHash(p, '#/');
+  ok('déconnexion : retour à l’accueil public', await p.isVisible('.hero__actions') && /Créer un compte/.test(await text(p, '#nav-auth')));
+  await go(p, 'mon-espace');
+  ok('après déconnexion : espace inaccessible', /Réservé aux étudiants inscrits/.test(await text(p, 'main')));
+  saw.length = 0;
+  await login(p, email);
+  await waitHash(p, '#/mon-espace');
+  ok('reconnexion : directement dans son espace, sans sélection', !saw.some(function (u) { return /bienvenue/.test(u); }) && /Licence 1/.test(await text(p, 'main')));
+  ok('reconnexion : progression, dernière leçon et compétence restaurées', /Le diviseur de tension/.test(await text(p, '.dash-hero')) && /Circuits électriques/.test(await text(p, '.dash__side')), await text(p, '.dash-hero'));
+  var d2 = await newPage(browser, 390), q = d2.page, saw2 = [];
+  q.on('framenavigated', function (f) { saw2.push(f.url()); });
+  await login(q, email);
+  await waitHash(q, '#/mon-espace');
+  ok('autre appareil : parcours retrouvé sans le redemander', !saw2.some(function (u) { return /bienvenue/.test(u); }) && /Licence 1/.test(await text(q, 'main')));
+  ok('autre appareil : dernière leçon et résultats retrouvés', /Le diviseur de tension/.test(await text(q, '.dash-hero')) && /Évaluation : Circuits/.test(await text(q, 'main')), await text(q, '.dash-hero'));
+  await shot(q, '08-autre-appareil-mobile');
+
+  console.log('\nÉvolution du parcours');
+  await go(p, 'changer-parcours');
+  ok('changement : prérequis manquants et test de positionnement proposés', /À valider d’abord : Comprendre les signaux/.test(await text(p, '.courses')) && (await p.$('[data-move=l2]')) === null && /Positionnement/.test(await text(p, '.courses')), await text(p, '.courses'));
+  await shot(p, '09-changer-parcours');
+  await go(p, 'evaluations/final-signaux'); await p.click('#start'); await p.waitForSelector('#eform');
+  await answerAll(p, email, 5, 5);
+  await finishExam(p);
+  await go(p, 'changer-parcours');
+  var before = (await S.db.db.query('select (select count(*)::int from public.attempts) a, (select count(*)::int from public.competency_validations) v')).rows[0];
+  p.once('dialog', function (x) { x.accept(); });
+  await p.click('[data-move=l2]');
+  await waitHash(p, '#/mon-espace');
+  ok('passage en L2 après validation des prérequis', (await profileOf(email)).space === 'l2' && /Licence 2/.test(await text(p, 'main')));
+  var after = (await S.db.db.query('select (select count(*)::int from public.attempts) a, (select count(*)::int from public.competency_validations) v')).rows[0];
+  ok('aucun résultat ni validation supprimés', after.a === before.a && after.v === before.v && after.v === 2, JSON.stringify([before, after]));
+  ok('compétence de L1 toujours affichée', /Circuits électriques/.test(await text(p, '.dash__side')) && /parcours précédent/.test(await text(p, '.dash__side')));
+  await go(p, 'lecons');
+  ok('L2 : ses modules, le prérequis et l’ancien module signalés', (await p.$$('.card[data-module=fibre]')).length === 1 && /Hors de votre parcours/.test(await text(p, '.card[data-module=circuits]')) && /Base à consolider/.test(await text(p, '.card[data-module=signaux]')));
+  await go(p, 'lecons/circuits/c2');
+  ok('ancien module toujours consultable', /Les lois de Kirchhoff/.test(await text(p, 'main h1')));
+  await go(p, 'evaluations/final-circuits');
+  ok('évaluation d’un ancien niveau refermée', /Hors de votre parcours/.test(await text(p, 'main h1')));
+  await go(p, 'changer-parcours');
+  ok('historique des parcours conservé', /Parcours choisi : Licence 1/.test(await text(p, 'main')) && /Licence 1 → Licence 2/.test(await text(p, 'main')));
+
+  console.log('\nAnciens comptes');
+  var d3 = await newPage(browser), v1 = d3.page;
+  await login(v1, 'ancien@exemple.org', 'Ancien');
+  await waitHash(v1, '#/bienvenue');
+  var uid = await v1.evaluate(function () { return TCL.auth.state().user.id; });
+  await S.db.db.query("update public.progress set data = $1, updated_at = now() where user_id = $2", [{ version: 1, updatedAt: '2026-11-01T00:00:00.000Z', lessons: { ip: { chapters: { c1: '2026-10-01T00:00:00.000Z' }, last: 'c1' } }, lab: {}, exercises: {}, activity: [], prefs: {} }, uid]);
+  await v1.reload(); await waitHash(v1, '#/bienvenue');
+  ok('compte V1 sans parcours : sélection demandée, sans réinscription', (await v1.$$('input[name=track]')).length === 6);
+  await chooseTrack(v1, 'l1');
+  await go(v1, 'progression');
+  ok('compte V1 : progression préservée', /1 \/ 22/.test(await text(v1, '.kpis')), await text(v1, '.kpis'));
+  await v1.reload(); await v1.waitForTimeout(800);
+  ok('compte V1 : sélection plus jamais redemandée', (await hash(v1)) === '#/progression');
+
+  console.log('\nPannes et sessions');
+  var api = S.api + '/**';
+  await d3.ctx.route(api, function (r) { r.abort(); });
+  await v1.goto(S.site + '#/mon-espace'); await v1.reload(); await v1.waitForTimeout(1200);
+  ok('service injoignable : parcours conservé, aucune nouvelle sélection, connexion maintenue', (await hash(v1)) === '#/mon-espace' && /Licence 1/.test(await text(v1, 'main')) && /Déconnexion/.test(await text(v1, '#nav-auth')), await text(v1, 'main'));
+  ok('service injoignable : état hors ligne annoncé', /Hors ligne/.test(await text(v1, 'main')));
+  await v1.evaluate(function () { var s = JSON.parse(localStorage.getItem('tcl.auth.session')); s.expires_at = Math.floor(Date.now() / 1000) - 3600; localStorage.setItem('tcl.auth.session', JSON.stringify(s)); });
+  await v1.reload(); await v1.waitForTimeout(1200);
+  ok('jeton expiré pendant la coupure : session et parcours conservés', /Déconnexion/.test(await text(v1, '#nav-auth')) && /Licence 1/.test(await text(v1, 'main')) && !!(await v1.evaluate(function () { return localStorage.getItem('tcl.auth.session'); })));
+  await d3.ctx.unroute(api);
+  await d3.ctx.route(api, function (r) { r.fulfill({ status: 503, contentType: 'application/json', body: '{"message":"indisponible"}' }); });
+  await v1.reload(); await v1.waitForTimeout(1200);
+  ok('panne du service (503) : session, parcours et progression conservés', /Déconnexion/.test(await text(v1, '#nav-auth')) && (await hash(v1)) === '#/mon-espace' && /Licence 1/.test(await text(v1, 'main')));
+  await d3.ctx.unroute(api);
+  await v1.reload(); await v1.waitForTimeout(1200);
+  ok('retour du service : session renouvelée automatiquement', /Déconnexion/.test(await text(v1, '#nav-auth')) && await v1.evaluate(function () { return !TCL.auth.state().offline && JSON.parse(localStorage.getItem('tcl.auth.session')).expires_at > Date.now() / 1000; }));
+  var tokenCalls = 0;
+  await d3.ctx.route('**/auth/v1/token**', function (r) { tokenCalls++; r.continue(); });
+  var tokens = await v1.evaluate(function () {
+    var real = Date.now;
+    Date.now = function () { return real() + 7200000; };
+    return Promise.all([1, 2, 3, 4, 5].map(function () { return TCL.auth.getAccessToken(); })).then(function (t) { Date.now = real; return t; }, function (e) { Date.now = real; return e.message; });
+  });
+  await d3.ctx.unroute('**/auth/v1/token**');
+  ok('renouvellements simultanés : une seule demande, la session survit', Array.isArray(tokens) && new Set(tokens).size === 1 && tokenCalls === 1 && /Déconnexion/.test(await text(v1, '#nav-auth')), JSON.stringify([tokens, tokenCalls]));
+  var before2 = await v1.evaluate(function () { return Object.keys(localStorage).filter(function (k) { return /^tcl\.progress\.u\./.test(k); }).length; });
+  await v1.evaluate(function () { var s = JSON.parse(localStorage.getItem('tcl.auth.session')); s.access_token = 'faux'; s.refresh_token = 'faux'; s.expires_at = Math.floor(Date.now() / 1000) - 10; localStorage.setItem('tcl.auth.session', JSON.stringify(s)); });
+  await v1.reload(); await v1.waitForTimeout(1000);
+  ok('session réellement invalide : retour au public avec un message, progression locale conservée', await v1.isVisible('#nav-auth >> text=Créer un compte') && /session a expiré/.test(await text(v1, '#toast-host')) && before2 === 1 && (await v1.evaluate(function () { return Object.keys(localStorage).filter(function (k) { return /^tcl\.progress\.u\./.test(k); }).length; })) === 1, await text(v1, '#toast-host'));
+
+  console.log('\nProgression réalisée sans compte (V1)');
+  var d4 = await newPage(browser), g4 = d4.page;
+  await go(g4, '');
+  await g4.evaluate(function () { localStorage.setItem('tcl.progress.guest', JSON.stringify({ version: 1, updatedAt: '2026-10-01T00:00:00.000Z', lessons: { signaux: { chapters: { c1: '2026-10-01T00:00:00.000Z' } } }, lab: {}, exercises: {}, activity: [{ id: 'a', at: '2026-10-01T00:00:00.000Z', type: 'lesson', module: 'signaux', text: 'Chapitre lu' }], prefs: {} })); });
+  await g4.reload(); await g4.waitForTimeout(300);
+  await go(g4, 'progression');
+  ok('progression locale annoncée au visiteur, réelle', /conserve une progression/.test(await text(g4, 'main')));
+  await login(g4, 'invite@exemple.org', 'Invite');
+  await chooseTrack(g4, 'l1');
+  await go(g4, 'progression');
+  ok('elle rejoint le compte à l’inscription', /1 \/ 22/.test(await text(g4, '.kpis')));
 
   console.log('\nAdministration');
-  await go(p, 'admin');
-  ok('un étudiant est refusé', /Accès réservé/.test(await text(p, 'main')));
-  var ctx2 = await browser.newContext({ viewport: { width: 1360, height: 900 } });
-  var a = await ctx2.newPage();
-  a.on('pageerror', function (e) { errs.push('admin pageerror: ' + e.message); });
-  a.on('console', function (m) { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs.push(m.text()); });
-  page = a;
+  var d5 = await newPage(browser), a = d5.page;
   await login(a, 'admin@local.test', 'Admin');
   await go(a, 'admin'); await a.waitForTimeout(500);
-  ok('vue d’ensemble chargée', (await a.$$('#adm .stat')).length === 8, await text(a, '#adm'));
-  await shot(a, '09-admin');
+  ok('administration accessible avant le choix du parcours', (await a.$$('#adm .stat')).length === 8, await text(a, '#adm'));
   await a.click('[data-tab=users]'); await a.waitForTimeout(400);
-  ok('utilisateurs listés', /etudiant@exemple\.org/.test(await text(a, '#adm')));
-  await a.click('[data-tab=exams]'); await a.waitForTimeout(400);
-  ok('évaluations éditables', (await a.$$('#adm tr[data-id]')).length === 14);
-  await a.fill('tr[data-id=final-signaux] [data-k=pass_percent]', '75');
-  await a.click('tr[data-id=final-signaux] [data-save]'); await a.waitForTimeout(400);
-  var pv = await S.db.db.query("select pass_percent from public.assessments where id = 'final-signaux'");
-  ok('modification du seuil enregistrée', Number(pv.rows[0].pass_percent) === 75);
-  await a.click('tr[data-id=final-signaux] [data-q]'); await a.waitForTimeout(400);
-  ok('banque consultable, sans corrigé à l’écran', /Banque/.test(await text(a, '#q-list')));
-  for (var t of ['reviews', 'content', 'ai', 'errors']) { await a.click('[data-tab=' + t + ']'); await a.waitForTimeout(350); }
+  ok('parcours des comptes visible', /Licence 2/.test(await text(a, '#adm')));
+  for (var t of ['exams', 'reviews', 'content', 'ai', 'errors']) { await a.click('[data-tab=' + t + ']'); await a.waitForTimeout(350); }
   ok('tous les onglets s’ouvrent sans erreur', !/callout--error/.test(await a.innerHTML('#adm')));
-  var audit = await S.db.db.query("select count(*)::int n from public.audit_log where action = 'update_assessment'");
-  ok('modification tracée dans le journal d’audit', audit.rows[0].n === 1);
+  await go(q, 'admin');
+  ok('un étudiant est refusé', /Accès réservé/.test(await text(q, 'main')));
 
-  console.log('\nMobile');
-  var mobile = await browser.newContext({ viewport: { width: 360, height: 700 }, deviceScaleFactor: 2, isMobile: true });
-  var m = await mobile.newPage();
-  var over = [];
-  for (var r of ['', 'parcours', 'parcours/l2', 'laboratoire/circuits', 'lecons/circuits/c3', 'mon-espace', 'evaluations', 'assistant']) {
-    await m.goto(S.site + '#/' + r); await m.waitForTimeout(300);
-    var w = await m.evaluate(function () { return document.documentElement.scrollWidth - window.innerWidth; });
+  console.log('\nAffichage');
+  var m1 = await browser.newContext({ viewport: { width: 360, height: 700 }, deviceScaleFactor: 2, isMobile: true });
+  var mp = await m1.newPage(); var over = [];
+  for (var r of ['', 'lecons', 'lecons/decouverte', 'laboratoire/decouverte', 'defis/decouverte', 'progression', 'connexion']) {
+    await mp.goto(S.site + '#/' + r); await mp.waitForTimeout(300);
+    var w = await mp.evaluate(function () { return document.documentElement.scrollWidth - window.innerWidth; });
     if (w > 1) over.push(r + ':' + w);
   }
-  ok('aucun débordement horizontal à 360 px', over.length === 0, over.join(' '));
-  var wide = await browser.newContext(); var wp = await wide.newPage(); var overD = [];
-  for (var vw of [1101, 1200, 1280, 1360, 1440, 1920]) {
-    await wp.setViewportSize({ width: vw, height: 800 }); await wp.goto(S.site + '#/parcours'); await wp.waitForTimeout(250);
-    var dw = await wp.evaluate(function () { var b = document.querySelector('#nav-auth').lastElementChild.getBoundingClientRect(); return Math.max(document.documentElement.scrollWidth - window.innerWidth, Math.ceil(b.right - window.innerWidth)); });
-    if (dw > 0) overD.push(vw + ':' + dw);
+  await mp.goto(S.site + '#/'); await mp.waitForTimeout(300); await shot(mp, '10-mobile-accueil');
+  await login(mp, 'mobile@exemple.org', 'Mobile');
+  await waitHash(mp, '#/bienvenue');
+  var ww = await mp.evaluate(function () { return document.documentElement.scrollWidth - window.innerWidth; });
+  if (ww > 1) over.push('bienvenue:' + ww);
+  await shot(mp, '11-mobile-choix');
+  await chooseTrack(mp, 'pro', 'pro-fibre');
+  ok('spécialisation enregistrée', (await profileOf('mobile@exemple.org')).specialization === 'pro-fibre');
+  await go(mp, 'lecons');
+  var pm = (await mp.$$eval('.card[data-module]', function (x) { return x.map(function (y) { return y.getAttribute('data-module'); }); })).sort().join(',');
+  ok('spécialisation : uniquement ses modules et leurs bases', pm === 'fibre,ondes-em,signaux', pm);
+  for (var s of ['mon-espace', 'parcours', 'changer-parcours', 'lecons', 'laboratoire', 'defis', 'evaluations', 'progression', 'compte']) {
+    await mp.goto(S.site + '#/' + s); await mp.waitForTimeout(300);
+    var w2 = await mp.evaluate(function () { return document.documentElement.scrollWidth - window.innerWidth; });
+    if (w2 > 1) over.push(s + ':' + w2);
   }
-  ok('en-tête complet de 1101 à 1920 px, aucun débordement', overD.length === 0, overD.join(' '));
-  await m.goto(S.site + '#/parcours/l2'); await m.waitForTimeout(300);
-  await shot(m, '10-mobile-l2');
-  await m.goto(S.site + '#/laboratoire/circuits'); await m.waitForTimeout(300);
-  await shot(m, '11-mobile-labo');
+  await go(mp, 'mon-espace'); await shot(mp, '12-mobile-tableau');
+  ok('aucun débordement horizontal à 360 px', over.length === 0, over.join(' '));
+  var wide = [];
+  for (var pair of [[g4, 'mon-espace'], [await (await browser.newContext()).newPage(), '']]) {
+    for (var vw of [1101, 1200, 1280, 1360, 1440, 1920]) {
+      await pair[0].setViewportSize({ width: vw, height: 800 }); await pair[0].goto(S.site + '#/' + pair[1]); await pair[0].waitForTimeout(250);
+      var dw = await pair[0].evaluate(function () { var b = document.querySelector('#nav-auth').lastElementChild.getBoundingClientRect(); return Math.max(document.documentElement.scrollWidth - window.innerWidth, Math.ceil(b.right - window.innerWidth)); });
+      if (dw > 0) wide.push(pair[1] + vw + ':' + dw);
+    }
+  }
+  ok('en-tête complet de 1101 à 1920 px, visiteur et étudiant', wide.length === 0, wide.join(' '));
 
-  console.log('\nPassage avec un fournisseur de TEST (jamais utilisé en production)');
+  console.log('\nAssistant : fournisseur de TEST (jamais utilisé en production)');
   S.close();
   await new Promise(function (r) { setTimeout(r, 200); });
   var calls = [];
   S = await dev.start({ sitePort: 8792, apiPort: 54392, provider: { name: 'test', send: function (sys, msgs) { calls.push({ sys: sys, msgs: msgs }); return Promise.resolve({ text: '[RÉPONSE DE TEST]', truncated: false, refused: false, usage: { inputTokens: 100, outputTokens: 50, costUsd: 0.01 } }); } } });
-  var c3 = await browser.newContext(); var q = await c3.newPage(); page = q;
-  q.on('pageerror', function (e) { errs.push('pageerror: ' + e.message); });
-  await login(q, 'ia@exemple.org', 'IA');
-  await go(q, 'assistant/fibre'); await q.waitForTimeout(400);
-  await q.click('[data-mode=hint]');
-  await q.fill('#ai-input', 'Comment calculer l’angle critique ?');
-  await q.click('#ai-send'); await q.waitForSelector('.bubble--bot:not(:has(.spinner))');
-  ok('la question atteint la passerelle, la réponse s’affiche', /RÉPONSE DE TEST/.test(await text(q, '.bubble--bot')));
-  ok('consigne « indice » et module transmis', calls.length === 1 && /Ne donne ni le résultat/.test(calls[0].sys) && /Fibre optique/.test(calls[0].sys));
-  var use = await S.db.db.query('select requests, input_tokens, cost_usd from public.ai_usage_daily');
-  ok('usage et coût enregistrés', use.rows[0].requests === 1 && Number(use.rows[0].input_tokens) === 100 && Number(use.rows[0].cost_usd) === 0.01);
-  await go(q, 'evaluations/final-signaux'); await q.click('#start'); await q.waitForSelector('#eform');
-  var st = await q.evaluate(async function () { var r = await TCL.api.tutor({ messages: [{ role: 'user', content: 'aide' }] }); return r.res.status; });
-  ok('pendant l’examen, le serveur bloque l’assistant (403) sans appeler le modèle', st === 403 && calls.length === 1, st);
+  var c3 = await newPage(browser), ai = c3.page;
+  await login(ai, 'ia@exemple.org', 'IA');
+  await chooseTrack(ai, 'l2');
+  await go(ai, 'assistant/fibre'); await ai.waitForTimeout(400);
+  await ai.click('[data-mode=hint]');
+  await ai.fill('#ai-input', 'Comment calculer l’angle critique ?');
+  await ai.click('#ai-send'); await ai.waitForSelector('.bubble--bot:not(:has(.spinner))');
+  ok('la question atteint la passerelle, le niveau de l’étudiant est transmis', /RÉPONSE DE TEST/.test(await text(ai, '.bubble--bot')) && /Licence 2/.test(calls[0].sys) && /Fibre optique/.test(calls[0].sys), calls[0] && calls[0].sys);
+  await go(ai, 'evaluations/final-signaux'); await ai.click('#start'); await ai.waitForSelector('#eform');
+  var st = await ai.evaluate(async function () { var r = await TCL.api.tutor({ messages: [{ role: 'user', content: 'aide' }] }); return r.res.status; });
+  ok('pendant l’examen, le serveur bloque l’assistant', st === 403 && calls.length === 1, st);
 
   console.log('\nHors ligne (dossier www construit)');
   S.close();
   await new Promise(function (r) { setTimeout(r, 200); });
   require('child_process').execFileSync(process.execPath, [path.join(__dirname, '../tools/build-www.js')]);
   S = await dev.start({ sitePort: 8793, apiPort: 54393, webRoot: path.join(__dirname, '../www') });
-  var c4 = await browser.newContext(); var o = await c4.newPage();
-  o.on('pageerror', function (e) { errs.push('pageerror: ' + e.message); });
+  var c4 = await newPage(browser), o = c4.page;
   await o.goto(S.site); await o.waitForTimeout(500);
   await o.evaluate(function () { return navigator.serviceWorker.ready; });
   await o.waitForTimeout(1500);
-  await c4.setOffline(true);
-  await o.reload(); await o.waitForTimeout(700);
-  await o.goto(S.site + '#/lecons/fibre/c2'); await o.waitForTimeout(400);
-  var offLesson = /Réfraction/.test(await text(o, 'main h1'));
-  await o.goto(S.site + '#/laboratoire/circuits'); await o.waitForTimeout(400);
-  ok('sans réseau, leçons et laboratoires s’ouvrent après une première visite', offLesson && (await o.$$('#schema svg')).length === 1, await text(o, 'main'));
-  await o.fill('#in-E', '24'); await o.waitForTimeout(150);
-  ok('sans réseau, les calculs fonctionnent', /^12 V/.test(await text(o, '#r-u')), await text(o, '#r-u'));
-  var leak = require('fs').readdirSync(path.join(__dirname, '../www'));
-  ok('www ne contient ni banque de questions, ni SQL, ni outils', ['content', 'supabase', 'tests', 'tools'].every(function (d) { return leak.indexOf(d) < 0; }));
+  var cached = function () { return o.evaluate(async function () { var k = await caches.keys(); var c = await caches.open(k[0]); return !!(await c.match('modules/fibre/lesson.js')); }); };
+  ok('visiteur : le catalogue n’est pas mis en cache', !(await cached()));
+  await login(o, 'offline@exemple.org', 'Offline');
+  await chooseTrack(o, 'l2');
+  await o.waitForTimeout(800);
+  ok('étudiant : le catalogue est disponible hors ligne', await cached());
+  await c4.ctx.setOffline(true);
+  await o.reload(); await o.waitForTimeout(1200);
+  ok('hors ligne : réouverture sur son espace, parcours conservé', (await hash(o)) === '#/mon-espace' && /Licence 2/.test(await text(o, 'main')), await text(o, 'main'));
+  await o.goto(S.site + '#/lecons/fibre/c2'); await o.waitForTimeout(500);
+  ok('hors ligne : les leçons du parcours s’ouvrent', /Réfraction/.test(await text(o, 'main h1')), await text(o, 'main h1'));
+  await o.goto(S.site + '#/laboratoire/fibre'); await o.waitForTimeout(500);
+  ok('hors ligne : les simulations fonctionnent', (await o.$$('.lab__controls')).length === 1);
+  await c4.ctx.setOffline(false);
 
+  var www = require('fs').readdirSync(path.join(__dirname, '../www'));
+  ok('www ne contient ni banque de questions, ni SQL, ni outils', ['content', 'supabase', 'tests', 'tools'].every(function (x) { return www.indexOf(x) < 0; }));
   ok('aucune erreur JavaScript ni violation CSP', errs.length === 0, errs.join(' | '));
   await browser.close(); S.close();
   var bad = results.filter(function (x) { return !x; }).length;
   console.log('\n' + (results.length - bad) + ' / ' + results.length + ' vérifications réussies.');
   process.exit(bad ? 1 : 0);
 })().catch(function (e) { console.error(e); process.exit(1); });
-
-var page;

@@ -33,6 +33,9 @@ async function rejects(p, re) {
   var b = await L.createUser('b@exemple.org', 'Benoit');
   var adminId = await L.createUser('admin@exemple.org', 'Admin');
   await L.db.query("update public.profiles set role = 'admin' where id = $1", [adminId]);
+  // Le parcours « Monde professionnel » donne accès à presque toutes les évaluations testées ici.
+  var withTrack = async function (id) { await L.rpc(id, 'choose_initial_track', { p_space: 'pro' }); return id; };
+  await withTrack(a); await withTrack(b);
 
   console.log('\nContinuité des données');
   await test('compte existant : profil créé, progression intacte', async function () {
@@ -202,7 +205,7 @@ async function rejects(p, re) {
     await rejects(L.rpc(b, 'start_attempt', { p_assessment: 'placement-reseaux' }), /Nombre maximal/);
   });
   await test('positionnement : la réussite valide les compétences visées, sans prérequis', async function () {
-    var c = await L.createUser('c@exemple.org');
+    var c = await withTrack(await L.createUser('c@exemple.org'));
     var t = await L.rpc(c, 'start_attempt', { p_assessment: 'placement-bases' });
     await solve(c, t.attempt_id, t.items, t.items.length);
     var res = await L.rpc(c, 'submit_attempt', { p_attempt: t.attempt_id });
@@ -211,7 +214,7 @@ async function rejects(p, re) {
     assert.deepStrictEqual(v.rows, [{ competency: 'circuits', source: 'placement' }, { competency: 'signaux', source: 'placement' }]);
   });
   await test('supervision humaine : la réussite reste en attente jusqu’à l’approbation', async function () {
-    var d = await L.createUser('d@exemple.org');
+    var d = await withTrack(await L.createUser('d@exemple.org'));
     await L.db.query("update public.assessments set requires_proctor = true where id = 'final-ip'");
     var t = await L.rpc(d, 'start_attempt', { p_assessment: 'final-ip' });
     await solve(d, t.attempt_id, t.items, t.items.length);
@@ -231,7 +234,7 @@ async function rejects(p, re) {
   console.log('\nAssistant IA : quotas');
   var svc = function (name, args) { return L.rpc(null, name, args, 'service_role'); };
   await test('coupé pendant une évaluation formelle en cours', async function () {
-    var e = await L.createUser('e@exemple.org');
+    var e = await withTrack(await L.createUser('e@exemple.org'));
     var t = await L.rpc(e, 'start_attempt', { p_assessment: 'final-signaux' });
     assert.deepStrictEqual(await svc('ai_reserve_request', { p_user: e }), { allowed: false, reason: 'exam_active' });
     await L.rpc(e, 'submit_attempt', { p_attempt: t.attempt_id });
@@ -280,6 +283,96 @@ async function rejects(p, re) {
     assert.strictEqual(n.rows[0].n, 30);
   });
 
+  console.log('\nParcours');
+  async function profile(id) { return (await L.db.query('select space, specialization, track_chosen_at from public.profiles where id = $1', [id])).rows[0]; }
+  async function history(id) { return (await L.db.query('select from_space, to_space, kind from public.track_history where user_id = $1 order by id', [id])).rows; }
+  async function validate(id, comps) { for (var x of comps) await L.db.query("insert into public.competency_validations (user_id, competency, source) values ($1, $2, 'admin') on conflict do nothing", [id, x]); }
+  var t1 = await L.createUser('t1@exemple.org');
+  await test('un compte neuf n’a aucun parcours et ne peut lancer aucune évaluation', async function () {
+    assert.strictEqual((await profile(t1)).space, null);
+    await rejects(L.rpc(t1, 'start_attempt', { p_assessment: 'final-circuits' }), /Choisissez d'abord votre parcours/);
+    await rejects(L.rpc(t1, 'start_attempt', { p_assessment: 'placement-bases' }), /Choisissez d'abord votre parcours/);
+  });
+  await test('écrire directement son parcours est refusé', async function () {
+    await rejects(L.as(t1, 'authenticated', function (tx) { return tx.query("update public.profiles set space = 'l3' where id = $1", [t1]); }), /permission denied/);
+    await rejects(L.as(t1, 'authenticated', function (tx) { return tx.query("update public.profiles set specialization = 'pro-fibre' where id = $1", [t1]); }), /permission denied/);
+    await rejects(L.as(t1, 'authenticated', function (tx) { return tx.query("insert into public.track_history (user_id, to_space, kind) values ($1, 'l3', 'change')", [t1]); }), /permission denied/);
+  });
+  await test('parcours inconnu ou spécialisation incohérente refusés', async function () {
+    await rejects(L.rpc(t1, 'choose_initial_track', { p_space: 'doctorat' }), /Parcours inconnu/);
+    await rejects(L.rpc(t1, 'choose_initial_track', { p_space: 'pro', p_specialization: 'l2-fibre' }), /Parcours inconnu/);
+  });
+  await test('choix initial enregistré, historisé, puis définitif', async function () {
+    var r = await L.rpc(t1, 'choose_initial_track', { p_space: 'l1' });
+    assert.strictEqual(r.space, 'l1'); assert.ok((await profile(t1)).track_chosen_at);
+    assert.deepStrictEqual(await L.rpc(t1, 'choose_initial_track', { p_space: 'l1' }), r);
+    await rejects(L.rpc(t1, 'choose_initial_track', { p_space: 'l3' }), /déjà enregistré/);
+    assert.deepStrictEqual(await history(t1), [{ from_space: null, to_space: 'l1', kind: 'initial' }]);
+  });
+  await test('anonyme : aucune fonction de parcours', async function () {
+    await rejects(L.rpc(null, 'choose_initial_track', { p_space: 'l1' }, 'anon'), /permission denied/);
+    await rejects(L.rpc(null, 'change_track', { p_space: 'l1' }, 'anon'), /permission denied/);
+  });
+  await test('évaluation hors parcours refusée par le serveur', async function () {
+    await rejects(L.rpc(t1, 'start_attempt', { p_assessment: 'final-fibre' }), /ne fait pas partie de votre parcours/);
+    await rejects(L.rpc(t1, 'start_attempt', { p_assessment: 'final-mobiles' }), /ne fait pas partie de votre parcours/);
+  });
+  await test('évaluation d’un prérequis venant d’un autre niveau : autorisée', async function () {
+    var l2 = await L.createUser('l2@exemple.org');
+    await L.rpc(l2, 'choose_initial_track', { p_space: 'l2' });
+    var t = await L.rpc(l2, 'start_attempt', { p_assessment: 'final-signaux' });
+    await L.rpc(l2, 'submit_attempt', { p_attempt: t.attempt_id });
+  });
+  await test('spécialisation : seules ses compétences sont ouvertes', async function () {
+    var sp = await L.createUser('sp@exemple.org');
+    await L.rpc(sp, 'choose_initial_track', { p_space: 'pro', p_specialization: 'pro-fibre' });
+    await rejects(L.rpc(sp, 'start_attempt', { p_assessment: 'final-ip' }), /ne fait pas partie/);
+    await rejects(L.rpc(sp, 'start_attempt', { p_assessment: 'final-fibre' }), /Prérequis non validés : ondes-em/);
+  });
+  await test('positionnement ouvert quel que soit le parcours', async function () {
+    var t = await L.rpc(t1, 'start_attempt', { p_assessment: 'placement-radio' });
+    assert.ok(t.attempt_id);
+    await rejects(L.rpc(t1, 'change_track', { p_space: 'preparatoire' }), /évaluation en cours/);
+    await L.rpc(t1, 'submit_attempt', { p_attempt: t.attempt_id });
+  });
+  await test('monter de niveau exige les compétences d’entrée', async function () {
+    await rejects(L.rpc(t1, 'change_track', { p_space: 'l2' }), /à valider avant ce parcours : circuits, signaux/);
+    assert.strictEqual((await profile(t1)).space, 'l1');
+    await validate(t1, ['circuits', 'signaux']);
+    assert.strictEqual((await L.rpc(t1, 'change_track', { p_space: 'l2' })).space, 'l2');
+  });
+  await test('changer ne supprime ni validation ni tentative', async function () {
+    var v = await L.db.query('select count(*)::int n from public.competency_validations where user_id = $1', [t1]);
+    assert.strictEqual(v.rows[0].n, 2);
+    var at = await L.db.query('select count(*)::int n from public.attempts where user_id = $1', [t1]);
+    assert.strictEqual(at.rows[0].n, 1);
+    assert.deepStrictEqual((await history(t1)).map(function (h) { return h.to_space; }), ['l1', 'l2']);
+  });
+  await test('redescendre et rejoindre le monde professionnel restent libres ; revenir exige toujours l’entrée', async function () {
+    assert.strictEqual((await L.rpc(t1, 'change_track', { p_space: 'preparatoire' })).space, 'preparatoire');
+    assert.strictEqual((await L.rpc(t1, 'change_track', { p_space: 'pro', p_specialization: 'pro-reseaux' })).specialization, 'pro-reseaux');
+    await rejects(L.rpc(t1, 'change_track', { p_space: 'l3' }), /à valider avant ce parcours/);
+  });
+  await test('sans parcours initial, le changement est refusé', async function () {
+    var n = await L.createUser('n@exemple.org');
+    await rejects(L.rpc(n, 'change_track', { p_space: 'l1' }), /d'abord votre parcours/);
+  });
+  await test('une tentative ouverte avant un changement décidé par l’administration reste terminable', async function () {
+    var u = await L.createUser('u@exemple.org');
+    await L.rpc(u, 'choose_initial_track', { p_space: 'l1' });
+    var t = await L.rpc(u, 'start_attempt', { p_assessment: 'final-circuits' });
+    await L.db.query("update public.profiles set space = 'l3' where id = $1", [u]);
+    assert.strictEqual((await L.rpc(u, 'start_attempt', { p_assessment: 'final-circuits' })).attempt_id, t.attempt_id);
+    await L.rpc(u, 'submit_attempt', { p_attempt: t.attempt_id });
+  });
+  await test('référentiel serveur identique à core/curriculum.js', async function () {
+    var cur = require('../core/curriculum.js');
+    for (var t of cur.trackList()) {
+      var r = await L.db.query('select competency from private.track_competencies where track_key = $1 order by 1', [t.key]);
+      assert.deepStrictEqual(r.rows.map(function (x) { return x.competency; }), t.competencies.slice().sort(), t.key);
+    }
+  });
+
   console.log('\nRéversibilité');
   await test('la migration se rejoue sans erreur (idempotente) et sans perte', async function () {
     var sql = fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261108000100_v2_core.sql'), 'utf8');
@@ -288,6 +381,12 @@ async function rejects(p, re) {
     assert.ok(v.rows[0].n >= 4);
   });
   await test('l’annulation retire la V2 et conserve comptes et progressions', async function () {
+    var migration2 = fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261108000200_v2_tracks.sql'), 'utf8');
+    await L.db.exec(migration2);
+    var spaceKept = (await L.db.query('select count(*)::int n from public.profiles where space is not null')).rows[0].n;
+    await L.db.exec(fs.readFileSync(path.join(__dirname, '../supabase/rollback/20261108000200_v2_tracks.down.sql'), 'utf8'));
+    assert.strictEqual((await L.db.query('select count(*)::int n from public.profiles where space is not null')).rows[0].n, spaceKept);
+    assert.strictEqual((await L.db.query("select to_regclass('public.track_history') as a")).rows[0].a, null);
     var down = fs.readFileSync(path.join(__dirname, '../supabase/rollback/20261108000100_v2_core.down.sql'), 'utf8');
     await L.db.exec(down);
     var g = await L.db.query('select data from public.progress where user_id = $1', [existingUser]);

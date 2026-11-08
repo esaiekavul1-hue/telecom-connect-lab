@@ -70,7 +70,7 @@
       '<a class="btn btn--ghost btn--sm" href="#/progression">' + I('chart') + 'Voir le détail</a></section>' +
       '</div><aside class="dash__side">' +
       '<section class="box"><h2>Activités enregistrées</h2>' + (acts ? '<ul class="activity activity--plain">' + acts + '</ul>' : '<p class="muted">Aucune activité pour l’instant.</p>') + '</section>' +
-      '<section class="box box--plain"><h2>Session</h2><p class="muted">Votre session reste active dans cet onglet et se termine à la fermeture du navigateur ou à la déconnexion.</p>' +
+      '<section class="box box--plain"><h2>Session</h2><p class="muted">Votre session reste active sur cet appareil jusqu’à votre déconnexion.</p>' +
       '<button type="button" class="btn btn--danger btn--block" id="account-signout">' + I('logout') + 'Se déconnecter</button></section>' +
       '</aside></div></div>';
 
@@ -97,7 +97,7 @@
 
   function localSummary() {
     var st = TCL.store.get();
-    if (TCL.store.isEmpty(st)) return '';
+    if (TCL.store.isEmpty(st) || TCL.access.mode() === 'visitor') return '';
     var all = TCL.registry.overallProgress(st);
     return '<section class="box"><h2>Progression sur cet appareil</h2><p>Progression générale : <strong>' + all.percent + ' %</strong></p>' + U.progressBar(all.percent, 'Progression') +
       '<p class="muted">Elle est enregistrée dans ce navigateur uniquement. Elle n’est pas synchronisée avec d’autres appareils.</p><a class="btn btn--ghost btn--sm" href="#/progression">' + I('chart') + 'Voir ma progression</a></section>';
@@ -203,7 +203,7 @@
         U.qs('#code-msg', form).innerHTML = '';
         TCL.auth.verifyCode(email, rc.code).then(function (user) {
           U.toast('Adresse vérifiée : bienvenue' + (user && user.name ? ', ' + user.name : '') + ' !', 'success');
-          root.location.hash = '#/compte';
+          root.location.hash = '#/mon-espace';
         }).catch(function (err) {
           setBusy(btn, false);
           U.qs('#code-msg', form).innerHTML = errorBox(err.message || 'La vérification a échoué.');

@@ -27,12 +27,13 @@
   function list(main) {
     if (TCL.auth.state().status !== 'signedIn') return needsAccount(main, 'Évaluations');
     var st = O.get();
-    var by = function (k) { return st.assessments.filter(function (a) { return a.kind === k; }); };
+    var mine = function (a) { return a.kind === 'placement' || !a.competency || TCL.access.inTrack(a.competency); };
+    var by = function (k) { return st.assessments.filter(function (a) { return a.kind === k && mine(a); }); };
     var body;
     if (st.status === 'not_deployed' || (st.status !== 'ready' && !st.assessments.length)) body = P.officialNotice() || '<p class="loading"><span class="spinner" aria-hidden="true"></span>Chargement…</p>';
     else body = P.officialNotice() + '<section><h2 class="h-sub">Tests de positionnement</h2><p class="muted">Vous maîtrisez déjà un domaine ? Une réussite valide directement les compétences concernées.</p><ul class="exam-list">' + by('placement').map(row).join('') + '</ul></section>' +
       '<section><h2 class="h-sub">Évaluations de fin de module</h2><ul class="exam-list">' + by('course_final').concat(by('exam')).map(row).join('') + '</ul></section>';
-    main.innerHTML = '<div class="container page">' + P.crumbs([{ label: 'Évaluations' }]) + P.head('Évaluations', 'Corrigées par le serveur, avec des paramètres qui changent à chaque tentative.') + body + '</div>';
+    main.innerHTML = '<div class="container page">' + P.crumbs([{ label: 'Évaluations' }]) + P.head('Évaluations', 'Corrigées par le serveur, avec des paramètres qui changent à chaque tentative.') + P.trackBanner() + body + '</div>';
   }
 
   function intro(main, params) {

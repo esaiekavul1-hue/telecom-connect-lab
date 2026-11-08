@@ -38,7 +38,7 @@
       main.innerHTML = '<div class="container page page--narrow"><div class="empty">' + I('sparkle', 'empty__icon') + '<h1 tabindex="-1">Assistant pédagogique</h1><p>L’assistant nécessite un compte et une connexion Internet.</p><p><a class="btn btn--primary" href="#/connexion">' + I('login') + 'Se connecter</a></p></div></div>';
       return;
     }
-    var mods = Object.keys(CUR.competencies).filter(function (id) { return TCL.registry.byId(id); });
+    var mods = Object.keys(CUR.competencies).filter(function (id) { return TCL.registry.byId(id) && TCL.access.allows(id); });
     var current = mods.indexOf(params.module) >= 0 ? params.module : '';
     var history = [], busy = false, gone = false, mode = 'explain';
 

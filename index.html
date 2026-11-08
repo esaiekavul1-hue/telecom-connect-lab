@@ -46,14 +46,7 @@
       </div>
       <nav aria-label="Liens du pied de page">
         <h2 class="site-footer__title">Explorer</h2>
-        <ul>
-          <li><a href="#/parcours">Parcours</a></li>
-          <li><a href="#/lecons">Mes leçons</a></li>
-          <li><a href="#/laboratoire">Mon laboratoire</a></li>
-          <li><a href="#/defis">Mes défis</a></li>
-          <li><a href="#/evaluations">Évaluations</a></li>
-          <li><a href="#/progression">Ma progression</a></li>
-        </ul>
+        <ul id="footer-links"></ul>
       </nav>
       <div>
         <h2 class="site-footer__title">À propos</h2>
@@ -85,60 +78,15 @@
   <script src="core/labkit.js"></script>
   <!-- Outils communs des exercices -->
   <script src="core/exercise-kit.js"></script>
-  <!-- Module « Circuits électriques » : calculs, simulation, leçon, exercices -->
+  <!-- Démonstration publique. Le catalogue est chargé après la connexion (core/access.js). -->
   <script src="modules/circuits/circuit-math.js"></script>
-  <script src="modules/circuits/simulation.js"></script>
-  <script src="modules/circuits/lesson.js"></script>
-  <script src="modules/circuits/exercises.js"></script>
-  <!-- Module « Comprendre les signaux » -->
-  <script src="modules/signaux/lesson.js"></script>
-  <script src="modules/signaux/simulation.js"></script>
-  <script src="modules/signaux/exercises.js"></script>
-  <!-- Module « Ondes électromagnétiques » : calculs, simulation, leçon, exercices -->
-  <script src="modules/ondes-em/wave-math.js"></script>
-  <script src="modules/ondes-em/simulation.js"></script>
-  <script src="modules/ondes-em/lesson.js"></script>
-  <script src="modules/ondes-em/exercises.js"></script>
-  <!-- Module « Antennes » : calculs, simulation, leçon, exercices -->
-  <script src="modules/antennes/antenna-math.js"></script>
-  <script src="modules/antennes/simulation.js"></script>
-  <script src="modules/antennes/lesson.js"></script>
-  <script src="modules/antennes/exercises.js"></script>
-  <!-- Module « Propagation radio » : calculs, simulation, leçon, exercices -->
-  <script src="modules/propagation/propagation-math.js"></script>
-  <script src="modules/propagation/simulation.js"></script>
-  <script src="modules/propagation/lesson.js"></script>
-  <script src="modules/propagation/exercises.js"></script>
-  <!-- Module « Chaîne de transmission » : calculs, simulation, leçon, exercices -->
-  <script src="modules/chaine/chain-math.js"></script>
-  <script src="modules/chaine/simulation.js"></script>
-  <script src="modules/chaine/lesson.js"></script>
-  <script src="modules/chaine/exercises.js"></script>
-  <!-- Module « Modulation » : calculs, simulation, leçon, exercices -->
-  <script src="modules/modulation/modulation-math.js"></script>
-  <script src="modules/modulation/simulation.js"></script>
-  <script src="modules/modulation/lesson.js"></script>
-  <script src="modules/modulation/exercises.js"></script>
-  <!-- Module « Fibre optique » : calculs, simulation, leçon, exercices -->
-  <script src="modules/fibre/fiber-math.js"></script>
-  <script src="modules/fibre/simulation.js"></script>
-  <script src="modules/fibre/lesson.js"></script>
-  <script src="modules/fibre/exercises.js"></script>
-  <!-- Module « Réseaux mobiles » : calculs, simulation, leçon, exercices -->
-  <script src="modules/mobiles/mobile-math.js"></script>
-  <script src="modules/mobiles/simulation.js"></script>
-  <script src="modules/mobiles/lesson.js"></script>
-  <script src="modules/mobiles/exercises.js"></script>
-  <!-- Module « Réseaux IP » : calculs, simulation, leçon, exercices -->
-  <script src="modules/ip/ip-math.js"></script>
-  <script src="modules/ip/simulation.js"></script>
-  <script src="modules/ip/lesson.js"></script>
-  <script src="modules/ip/exercises.js"></script>
+  <script src="modules/decouverte/decouverte.js"></script>
   <script src="modules/registry.js"></script>
   <!-- Pages -->
   <script src="core/curriculum.js"></script>
   <script src="core/mastery.js"></script>
   <script src="core/platform.js"></script>
+  <script src="core/access.js"></script>
   <script src="pages/common.js"></script>
   <script src="pages/home.js"></script>
   <script src="pages/lessons.js"></script>
@@ -151,6 +99,8 @@
   <script src="pages/assistant.js"></script>
   <script src="pages/dashboard.js"></script>
   <script src="pages/admin.js"></script>
+  <script src="pages/public.js"></script>
+  <script src="pages/track.js"></script>
   <!-- Démarrage -->
   <script src="script.js"></script>
 </body>

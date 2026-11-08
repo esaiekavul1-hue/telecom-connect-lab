@@ -54,15 +54,20 @@
   function space(main, params) {
     var s = CUR.spaceById(params.space);
     if (!s) return P.notFound.render(main);
-    var st = MA.spaceState(s, O.ctx());
-    var courses = visibleCourses(st.courses).map(function (c) {
+    var ctx = O.ctx(), t = TCL.access.track(), mine = t.state === 'set' && t.space === s.id;
+    var st = MA.spaceState(s, ctx);
+    var list = visibleCourses(st.courses);
+    if (mine && t.specialization) list = list.filter(function (c) { return c.id === t.specialization; });
+    var scope = TCL.access.scope();
+    var bases = mine && scope.prerequisites.length ? '<section class="box"><h2>Bases à consolider</h2><p class="muted">Ces compétences sont exigées par votre parcours.</p><ul class="mod-rows">' + scope.prerequisites.map(function (id) { return moduleRow(MA.moduleMastery(id, ctx)); }).join('') + '</ul></section>' : '';
+    var courses = list.map(function (c) {
       var planned = c.state.status === 'planned';
       return '<article class="course' + (planned ? ' course--planned' : '') + '"><header class="course__head"><h2>' + esc(c.title) + '</h2>' + pill(c.state.status) + '</header>' +
         (planned ? '<p class="muted">Le contenu de ce cours n’est pas encore développé.</p>' :
           (c.coverage === 'partial' ? '<p class="muted">Couverture partielle : ce cours réunit les modules disponibles, sans couvrir tout le programme.</p>' : '') +
           '<ul class="mod-rows">' + c.state.modules.map(moduleRow).join('') + '</ul>') + '</article>';
     }).join('');
-    main.innerHTML = '<div class="container page">' + P.crumbs([{ label: 'Parcours', href: '#/parcours' }, { label: s.title }]) + P.head(s.title, esc(s.text)) + P.officialNotice() +
+    main.innerHTML = '<div class="container page">' + P.crumbs(mine ? [{ label: 'Mon parcours' }] : [{ label: 'Parcours', href: '#/parcours' }, { label: s.title }]) + P.head(mine ? 'Mon parcours : ' + t.label : s.title, esc(s.text), mine ? '<a class="btn btn--ghost btn--sm" href="#/changer-parcours">' + I('reset') + 'Changer de parcours</a>' : '') + P.officialNotice() + bases +
       (s.placement ? '<div class="callout callout--info">' + I('target') + '<p>Déjà expérimenté ? Les <a href="#/evaluations">tests de positionnement</a> valident directement vos acquis.</p></div>' : '') +
       '<div class="courses">' + courses + '</div></div>';
   }
@@ -80,6 +85,7 @@
     var action;
     if (m.status === 'validated') action = '<p class="pill pill--ok">' + I('check') + 'Compétence validée ' + esc(U.formatWhen(m.validated.validated_at)) + '</p><p><a class="btn btn--ghost" href="#/attestation/' + id + '">' + I('shield') + 'Voir l’attestation interne</a></p>';
     else if (m.status === 'locked') action = '<p>' + I('lock') + ' Validez d’abord : ' + m.prerequisitesMissing.map(function (p) { return esc(CUR.competencies[p].title); }).join(', ') + '.</p><p class="muted">Vous pouvez vous entraîner dès maintenant. Seule l’évaluation reste fermée.</p>';
+    else if (!TCL.access.inTrack(id)) action = '<p class="muted">Ce module est hors de votre parcours actuel : vos résultats restent consultables, mais son évaluation n’est pas ouverte.</p>';
     else if (off.status === 'ready') action = (m.ready ? '<p>Vous avez atteint les seuils conseillés.</p>' : '<p class="muted">Seuils conseillés non atteints : vous pouvez tout de même tenter l’évaluation.</p>') + '<a class="btn btn--primary" href="#/evaluations/' + fid + '">' + I('shield') + 'Passer l’évaluation</a>';
     else action = '<p class="muted">L’évaluation nécessite une connexion à votre compte et un service actif.</p>';
     var weak = m.weak.length ? '<section class="box"><h2>À retravailler</h2><p class="muted">D’après vos exercices sans réussite à ce jour.</p><ul>' + m.weak.slice(0, 4).map(function (w) { return '<li>' + esc(w.skill) + ' (' + w.failed + ' exercice' + (w.failed > 1 ? 's' : '') + ')</li>'; }).join('') + '</ul><p><a class="btn btn--ghost btn--sm" href="#/defis/' + id + '">Refaire les exercices</a> <a class="btn btn--ghost btn--sm" href="#/assistant/' + id + '">' + I('sparkle') + 'Demander une explication</a></p></section>' : '';

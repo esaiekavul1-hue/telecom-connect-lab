@@ -13,9 +13,11 @@
   function library(main) {
     var st = TCL.store.get();
     var html = '<div class="container page">' + P.crumbs([{ label: 'Mes leçons' }]) +
-      P.head('Mes leçons', 'Les leçons sont classées par domaine. Chacune est reliée à sa simulation et à ses exercices corrigés.');
+      P.head('Mes leçons', 'Les leçons sont classées par domaine. Chacune est reliée à sa simulation et à ses exercices corrigés.') + P.trackBanner();
+    var visible = TCL.registry.scopedModules();
     TCL.registry.categories.forEach(function (cat) {
-      var mods = TCL.registry.modules.filter(function (m) { return m.category === cat.id; });
+      var mods = visible.filter(function (m) { return m.category === cat.id; });
+      if (!mods.length) return;
       html += '<section class="cat" aria-labelledby="cat-' + cat.id + '"><div class="cat__head"><h2 id="cat-' + cat.id + '">' + esc(cat.title) + '</h2><p>' + esc(cat.text) + '</p></div><div class="cards">';
       mods.forEach(function (m) {
         var parts = TCL.registry.liveParts(m);
@@ -24,7 +26,7 @@
           var p = TCL.registry.moduleProgress(st, m.id);
           var last = (st.lessons[m.id] || {}).last;
           var resume = last && !p.lessonComplete;
-          html += '<article class="card card--live" data-module="' + m.id + '"><div class="card__top">' + I(m.icon) + '<span class="badge badge--live">' + (p.lessonComplete ? 'Leçon terminée' : 'Disponible') + '</span></div>' +
+          html += '<article class="card card--live" data-module="' + m.id + '"><div class="card__top">' + I(m.icon) + '<span class="badge badge--live">' + (p.lessonComplete ? 'Leçon terminée' : 'Disponible') + '</span>' + P.trackTag(m.id) + '</div>' +
             '<h3><a href="#/lecons/' + m.id + '">' + esc(m.title) + '</a></h3><p>' + esc(m.text) + '</p>' +
             '<p class="card__meta">' + p.chaptersDone + ' chapitre' + (p.chaptersDone > 1 ? 's' : '') + ' lu' + (p.chaptersDone > 1 ? 's' : '') + ' sur ' + p.chaptersTotal + '</p>' +
             U.progressBar(p.chaptersDone / p.chaptersTotal * 100, 'Chapitres lus') +
@@ -39,7 +41,7 @@
       });
       html += '</div></section>';
     });
-    main.innerHTML = html + '</div>';
+    main.innerHTML = html + P.trackEmpty(visible.length) + P.trackPlanned() + '</div>';
   }
 
   /* ----------------------------- Lecteur de leçon ----------------------------- */
@@ -127,8 +129,12 @@
     var ch = lesson.chapters[idx];
     var prev = lesson.chapters[idx - 1], next = lesson.chapters[idx + 1];
     var store = TCL.store;
-    if (store.lessonOf(store.get(), mid).last !== cid) {
-      store.update(function (s) { store.lessonOf(s, mid).last = cid; }, 'lesson-open');
+    var seen = (store.get().prefs || {}).lastLesson;
+    if (store.lessonOf(store.get(), mid).last !== cid || !seen || seen.module !== mid || seen.chapter !== cid) {
+      store.update(function (s) {
+        store.lessonOf(s, mid).last = cid;
+        s.prefs.lastLesson = { module: mid, chapter: cid, at: new Date().toISOString() };
+      }, 'lesson-open');
     }
     var done = store.lessonOf(store.get(), mid).chapters;
     var after = parts.exercises ? ['#/defis/' + mid, 'Passer aux exercices'] : (parts.lab ? ['#/laboratoire/' + mid, 'Ouvrir la simulation'] : ['#/lecons', 'Toutes les leçons']);

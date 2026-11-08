@@ -34,13 +34,26 @@ var hash = crypto.createHash('sha256');
 files.sort().forEach(function (f) { hash.update(f); hash.update(fs.readFileSync(path.join(OUT, f))); });
 var version = hash.digest('hex').slice(0, 12);
 
-/* Service worker : tout le site en cache, au prix d'un seul téléchargement par version. */
+/*
+ * Service worker : un visiteur ne met en cache que l'application et la démonstration ;
+ * le catalogue s'y ajoute dès qu'il est chargé après la connexion, puis reste
+ * disponible hors ligne, y compris après une mise à jour de l'application.
+ */
+var html = fs.readFileSync(path.join(OUT, 'index.html'), 'utf8');
+var inPage = {};
+(html.match(/<script src="[^"]+"/g) || []).forEach(function (m) { inPage[m.slice(13, -1)] = 1; });
+var isContent = function (f) { return /^modules\/(?!registry\.js)/.test(f) && !inPage[f]; };
+var core = files.filter(function (f) { return !isContent(f); });
+var content = files.filter(isContent);
 fs.writeFileSync(path.join(OUT, 'sw.js'), [
   "var CACHE = 'tcl-" + version + "';",
-  'var FILES = ' + JSON.stringify(['./'].concat(files)) + ';',
-  "self.addEventListener('install', function (e) { e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(FILES); }).then(function () { return self.skipWaiting(); })); });",
+  'var CORE = ' + JSON.stringify(['./'].concat(core)) + ';',
+  'var CONTENT = ' + JSON.stringify(content) + ';',
+  "var PROBE = new URL('modules/fibre/lesson.js', self.registration.scope).href;",
+  "function hadCatalogue() { return caches.keys().then(function (ks) { return Promise.all(ks.filter(function (k) { return k !== CACHE; }).map(function (k) { return caches.open(k).then(function (c) { return c.match(PROBE); }); })); }).then(function (r) { return r.some(Boolean); }); }",
+  "self.addEventListener('install', function (e) { e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(CORE).then(hadCatalogue).then(function (yes) { return yes ? c.addAll(CONTENT) : null; }); }).then(function () { return self.skipWaiting(); })); });",
   "self.addEventListener('activate', function (e) { e.waitUntil(caches.keys().then(function (ks) { return Promise.all(ks.filter(function (k) { return k !== CACHE; }).map(function (k) { return caches.delete(k); })); }).then(function () { return self.clients.claim(); })); });",
-  "self.addEventListener('fetch', function (e) { var u = new URL(e.request.url); if (e.request.method !== 'GET' || u.origin !== location.origin) return; e.respondWith(caches.match(e.request, { ignoreSearch: true }).then(function (r) { return r || fetch(e.request); })); });",
+  "self.addEventListener('fetch', function (e) { var u = new URL(e.request.url); if (e.request.method !== 'GET' || u.origin !== location.origin) return; e.respondWith(caches.match(e.request, { ignoreSearch: true }).then(function (r) { return r || fetch(e.request).then(function (res) { if (res.ok) { var copy = res.clone(); caches.open(CACHE).then(function (c) { c.put(e.request, copy); }); } return res; }); })); });",
   ''
 ].join('\n'));
 

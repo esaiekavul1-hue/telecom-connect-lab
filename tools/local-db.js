@@ -25,6 +25,7 @@ async function create(options) {
   await db.exec(fs.readFileSync(path.join(ROOT, 'supabase/schema.sql'), 'utf8'));
   if (options && options.beforeMigration) await options.beforeMigration(db);
   await db.exec(fs.readFileSync(path.join(ROOT, 'supabase/migrations/20261108000100_v2_core.sql'), 'utf8'));
+  await db.exec(fs.readFileSync(path.join(ROOT, 'supabase/migrations/20261108000200_v2_tracks.sql'), 'utf8'));
   await db.exec(require('./generate-assessments.js').sql(require('./generate-assessments.js').assessments()));
 
   /** Exécute une requête avec l'identité d'un utilisateur, comme le ferait l'API. */

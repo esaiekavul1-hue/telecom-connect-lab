@@ -33,8 +33,8 @@
         host.innerHTML = '<form id="u-f" class="inline-form"><label for="u-q" class="sr-only">Recherche</label><input id="u-q" placeholder="Nom ou e-mail"><button class="btn btn--ghost btn--sm">Chercher</button></form><div id="u-r"></div>';
         function load() {
           return A.rpc('admin_list_users', { p_search: U.qs('#u-q', host).value.trim(), p_limit: 50, p_offset: 0 }).then(function (list) {
-            U.qs('#u-r', host).innerHTML = list.length ? table(['Compte', 'Nom', 'Rôle', 'Validations', 'Tentatives', 'Dernière synchro'], list.map(function (u) {
-              return '<tr><td>' + esc(u.email) + '</td><td>' + esc(u.display_name || '') + '</td><td><select data-role="' + u.id + '" aria-label="Rôle de ' + esc(u.email) + '">' + ['student', 'teacher', 'admin'].map(function (r) { return '<option value="' + r + '"' + (u.role === r ? ' selected' : '') + '>' + ({ student: 'Étudiant', teacher: 'Enseignant', admin: 'Administrateur' })[r] + '</option>'; }).join('') + '</select></td><td>' + u.validations + '</td><td>' + u.attempts + '</td><td>' + (u.last_sync ? esc(U.formatWhen(u.last_sync)) : '—') + '</td></tr>';
+            U.qs('#u-r', host).innerHTML = list.length ? table(['Compte', 'Nom', 'Parcours', 'Rôle', 'Validations', 'Tentatives', 'Dernière synchro'], list.map(function (u) {
+              return '<tr><td>' + esc(u.email) + '</td><td>' + esc(u.display_name || '') + '</td><td>' + esc(u.space ? CUR.trackLabel(u.space, null) : '—') + '</td><td><select data-role="' + u.id + '" aria-label="Rôle de ' + esc(u.email) + '">' + ['student', 'teacher', 'admin'].map(function (r) { return '<option value="' + r + '"' + (u.role === r ? ' selected' : '') + '>' + ({ student: 'Étudiant', teacher: 'Enseignant', admin: 'Administrateur' })[r] + '</option>'; }).join('') + '</select></td><td>' + u.validations + '</td><td>' + u.attempts + '</td><td>' + (u.last_sync ? esc(U.formatWhen(u.last_sync)) : '—') + '</td></tr>';
             })) : '<p class="muted">Aucun compte trouvé.</p>';
             U.qsa('[data-role]', host).forEach(function (s) {
               var prev = s.value;

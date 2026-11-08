@@ -13,6 +13,17 @@ Branche : `v2`. Point de retour de la V1 : tag `v1-baseline`. Rien n'a été pub
 | `npm run build` | Régénère la banque SQL et le dossier `www`. |
 | `npm run cap:sync` | `build` puis copie vers Android et iOS. |
 
+## Espace public et parcours
+
+| Question | Réponse |
+|---|---|
+| Qui voit quoi ? | `core/access.js` : `visitor` (démonstration), `student` (parcours du compte), `open` (aucune connexion configurée : tout reste local, comme en V1). |
+| Où adapter un parcours ? | `core/curriculum.js` : cours, compétences d'entrée (`entry`). Puis `npm run build` et réexécution du fichier de seed : le serveur reçoit la même liste. |
+| Quand le parcours est-il demandé ? | Seulement si le serveur confirme son absence. Coupure, panne ou profil en cours de chargement : jamais. |
+| Écriture du parcours | `choose_initial_track` (une fois), `change_track` (entrée vérifiée). Écriture directe refusée. |
+| Service non activé | Le choix est conservé avec la progression du compte, puis transmis au profil dès l'activation, sans redemander. |
+| Catalogue | Téléchargé après la connexion (`core/access.js`). Démonstration : `modules/decouverte/`, `pages/public.js`. |
+
 ## Architecture
 
 JS sans étape de compilation, pour rester léger sur les téléphones modestes.
@@ -36,6 +47,10 @@ Les pages de cours restent librement accessibles : les prérequis ferment l'éva
 ## État des fonctionnalités
 
 ### Opérationnel (vérifié par les tests, en local)
+- Espace public de découverte : leçon, simulation et mini-défi réels, aperçu du suivi.
+- Choix unique du parcours, spécialisations, reconnexion directe, profil retrouvé sur un autre appareil.
+- Contenus filtrés selon le parcours ; évaluations et changements contrôlés par le serveur.
+- Sessions conservées lors des coupures et des pannes du service.
 - Six espaces, cours, statuts, seuils configurables.
 - Évaluations : QCM, numérique, texte, dépannage par QCM, variantes de paramètres, chronomètre serveur, tentatives limitées, délai, reprise, correction détaillée, remédiation, positionnement.
 - Module complet Circuits électriques : leçon, laboratoire à solveur nodal, 9 exercices, évaluation.
@@ -47,11 +62,12 @@ Les pages de cours restent librement accessibles : les prérequis ferment l'éva
 - Administration des contenus : présentation et seuils uniquement. Leçons et laboratoires restent dans le code.
 - Types d'évaluation : pas encore de TP virtuel noté par le serveur ni de résolution de problème à plusieurs étapes.
 - Conflits de synchronisation : fusion automatique existante, sans écran de résolution.
+- Filtrage par parcours : seules les évaluations sont contrôlées par le serveur. Leçons et laboratoires sont des fichiers statiques : l'interface les réserve, mais un fichier reste téléchargeable par son adresse.
 
 ### Nécessite une configuration externe (décision du fondateur)
 Dans cet ordre, sur le projet Supabase existant :
 1. Faire une sauvegarde de la base.
-2. SQL Editor : exécuter `supabase/migrations/20261108000100_v2_core.sql`, puis `supabase/seed/assessments.generated.sql`.
+2. SQL Editor, dans cet ordre : `supabase/migrations/20261108000100_v2_core.sql`, `supabase/migrations/20261108000200_v2_tracks.sql`, puis `supabase/seed/assessments.generated.sql`.
 3. Se désigner administrateur :
    `update public.profiles set role = 'admin' where id = (select id from auth.users where email = 'VOTRE_EMAIL');`
 4. Assistant IA : créer une clé chez le fournisseur, puis `supabase functions deploy ai-tutor` et `supabase secrets set ANTHROPIC_API_KEY=… ALLOWED_ORIGINS=https://dainty-biscuit-3fc767.netlify.app,https://localhost,capacitor://localhost`.
@@ -69,14 +85,16 @@ Dans cet ordre, sur le projet Supabase existant :
 - Partenariats et sponsors : aucun mécanisme, aucune publicité.
 
 ## Non vérifié à ce stade
-- Migration sur le vrai projet Supabase : testée sur PostgreSQL WASM avec une reproduction de `auth.users`.
+- Migrations sur le vrai projet Supabase : testées sur PostgreSQL WASM avec une reproduction de `auth.users`.
 - Appel réel du fournisseur d'IA (pas de clé) : l'adaptateur `index.ts` n'a jamais été exécuté.
 - CSP et application sur un vrai téléphone Android ou iPhone.
 
 ## Points d'attention
 - La session est dans `localStorage` (correctif du fondateur, pour rester connecté sur Android).
 - Ne pas réordonner les paramètres d'une question publiée : créer un nouvel identifiant (voir `bank.js`).
-- Après la mise en ligne, le pourcentage d'entraînement des comptes existants baisse légèrement : 19 activités s'ajoutent.
+- Le pourcentage de progression porte désormais sur les modules du parcours.
+- Le premier choix de parcours est déclaratif : les prérequis de chaque évaluation restent contrôlés par le serveur.
+- Les visiteurs V1 sans compte n'accèdent plus qu'à la démonstration ; leur progression locale rejoint le compte à l'inscription.
 - `script.js.bak` (présent avant la V2) n'est pas suivi par Git.
 
 ## Priorités suggérées

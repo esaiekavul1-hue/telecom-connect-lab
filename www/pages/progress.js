@@ -35,7 +35,7 @@
   }
 
   function nextSteps(st) {
-    var mods = R().modules.filter(function (m) { return R().statusOf(m) !== 'planned'; });
+    var mods = R().scopedModules().filter(function (m) { return R().statusOf(m) !== 'planned'; });
     var prog = {};
     mods.forEach(function (m) { prog[m.id] = R().moduleProgress(st, m.id); });
     var open = mods.filter(function (m) { return !prog[m.id].complete; });
@@ -86,23 +86,25 @@
 
   function render(main) {
     var st = TCL.store.get();
-    var all = R().overallProgress(st);
+    var all = R().overallProgress(st, TCL.access.coreIds());
     var empty = TCL.store.isEmpty(st);
     var head = P.crumbs([{ label: 'Ma progression' }]) + P.head('Ma progression', 'Un bilan calculé à partir de ce que vous avez réellement fait : chapitres lus, missions réussies et réponses aux exercices, dans chaque module.') +
-      '<p class="sync-line" data-sync-status>' + P.syncStatusHtml() + '</p>';
+      P.trackBanner() + '<p class="sync-line" data-sync-status>' + P.syncStatusHtml() + '</p>';
 
-    if (empty) {
+    var scopedMods = R().scopedModules().filter(function (m) { return R().statusOf(m) !== 'planned'; });
+    if (empty || !scopedMods.length) {
       main.innerHTML = '<div class="container page">' + head +
         '<div class="empty">' + I('chart', 'empty__icon') + '<h2>Votre progression commencera ici</h2>' +
         '<p>Aucune activité n’est encore enregistrée. Lisez un chapitre, réussissez une mission du laboratoire ou répondez à un exercice : ce tableau se remplira automatiquement.</p>' +
-        '<div class="empty__actions"><a class="btn btn--primary" href="#/lecons/signaux/c1">' + I('book') + 'Lire le premier chapitre</a><a class="btn btn--ghost" href="#/laboratoire">' + I('flask') + 'Ouvrir le laboratoire</a></div></div></div>';
+        '<div class="empty__actions"><a class="btn btn--primary" href="#/lecons">' + I('book') + 'Ouvrir les leçons</a><a class="btn btn--ghost" href="#/laboratoire">' + I('flask') + 'Ouvrir le laboratoire</a></div></div></div>';
       return;
     }
 
-    var mods = R().modules.filter(function (m) { return R().statusOf(m) !== 'planned'; });
+    var mods = scopedMods;
+    var inList = function (id) { return mods.some(function (m) { return m.id === id; }); };
     var prefs = st.prefs || {};
-    var lastMod = (st.activity.filter(function (a) { return a.module && R().byId(a.module); })[0] || {}).module;
-    var sel = R().byId(prefs.progressModule) ? prefs.progressModule : (lastMod || 'signaux');
+    var lastMod = (st.activity.filter(function (a) { return a.module && inList(a.module); })[0] || {}).module;
+    var sel = inList(prefs.progressModule) ? prefs.progressModule : (lastMod || mods[0].id);
 
     var rows = mods.map(function (m) {
       var p = R().moduleProgress(st, m.id);

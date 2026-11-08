@@ -33,7 +33,7 @@ function assessments() {
 }
 
 function sql(list) {
-  var s = ['-- FICHIER GÉNÉRÉ par tools/generate-assessments.js : ne pas modifier à la main.', '-- À exécuter après supabase/migrations/20261108000100_v2_core.sql.', 'begin;'];
+  var s = ['-- FICHIER GÉNÉRÉ par tools/generate-assessments.js : ne pas modifier à la main.', '-- À exécuter après les deux migrations de supabase/migrations/. Peut être relancé sans risque.', 'begin;'];
   list.forEach(function (a) {
     s.push('insert into public.assessments (id,title,description,kind,competency,question_count,pass_percent,duration_seconds,max_attempts,cooldown_minutes,prerequisites,grants,status) values (' +
       [lit(a.id), lit(a.title), lit(a.description), lit(a.kind), a.competency ? lit(a.competency) : 'null', a.count, a.pass, a.duration, a.maxAttempts || 'null', a.cooldown, arr(a.prerequisites), arr(a.grants), "'published'"].join(',') +
@@ -42,6 +42,11 @@ function sql(list) {
       s.push('insert into private.questions (id,assessment_id,skill,kind,variants) values (' + [lit(q.id), lit(a.id), lit(q.skill), lit(q.kind), json(q.variants)].join(',') +
         ') on conflict (id) do update set skill=excluded.skill, kind=excluded.kind, variants=excluded.variants;');
     });
+  });
+  s.push('delete from private.track_competencies;', 'delete from private.track_catalog;');
+  cur.trackList().forEach(function (t) {
+    s.push('insert into private.track_catalog (track_key,space,specialization,rank,entry) values (' + [lit(t.key), lit(t.space), t.specialization ? lit(t.specialization) : 'null', t.rank == null ? 'null' : t.rank, arr(t.entry)].join(',') + ');');
+    t.competencies.forEach(function (c) { s.push('insert into private.track_competencies (track_key,competency) values (' + lit(t.key) + ',' + lit(c) + ');'); });
   });
   s.push('commit;', '');
   return s.join('\n');
