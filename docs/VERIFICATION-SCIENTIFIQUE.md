@@ -81,7 +81,7 @@ Informatique et IoT : complément à deux, double précision, von Neumann, cycle
 ## Tests numériques effectués
 
 - `tests/run-content-tests.js` : pour chaque module, valeurs limites (min, max, 60 tirages), absence de valeur invalide, mission réalisable et non acquise au départ, corrigé accepté et mauvaise réponse refusée.
-- `tests/content-references.js` : 54 cas de référence, calculés à la main ou lus dans les documents ci-dessus. Exemples : Thévenin comparé au solveur nodal sur 40 circuits ; SNR de quantification mesuré ; BER 16-QAM contre Monte-Carlo (1,6 million de bits) ; Hamming(7,4) exhaustif ; Erlang B contre la somme directe ; exemple OSTEP 110 s et 50 s ; topics MQTT de la spécification ; temps d'antenne LoRa recalculé.
+- `tests/content-references.js` : 53 cas de référence, calculés à la main ou lus dans les documents ci-dessus. Exemples : Thévenin comparé au solveur nodal sur 40 circuits ; SNR de quantification mesuré ; BER 16-QAM contre Monte-Carlo (1,6 million de bits) ; Hamming(7,4) exhaustif ; Erlang B contre la somme directe ; exemple OSTEP 110 s et 50 s ; topics MQTT de la spécification ; temps d'antenne LoRa recalculé.
 - Toutes les figures techniques ont été contrôlées visuellement sur une planche. Cette relecture a corrigé le pont de Graetz, le raccordement du transistor et l'échelle R-2R.
 
 ## Écart constaté
