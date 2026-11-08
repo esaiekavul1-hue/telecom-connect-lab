@@ -288,7 +288,7 @@ function rpcResult(p, name, args) { return p.evaluate(function (a) { return TCL.
   ok('compte V1 sans parcours : sélection demandée, sans réinscription', (await v1.$$('input[name=track]')).length === 6);
   await chooseTrack(v1, 'l1');
   await go(v1, 'progression');
-  ok('compte V1 : progression préservée', /1 \/ 22/.test(await text(v1, '.kpis')), await text(v1, '.kpis'));
+  ok('compte V1 : progression préservée', /Chapitres lus ?1 \/ \d+/.test(await text(v1, '.kpis')), await text(v1, '.kpis'));
   await v1.reload(); await v1.waitForTimeout(800);
   ok('compte V1 : sélection plus jamais redemandée', (await hash(v1)) === '#/progression');
 
@@ -332,7 +332,7 @@ function rpcResult(p, name, args) { return p.evaluate(function (a) { return TCL.
   await login(g4, 'invite@exemple.org', 'Invite');
   await chooseTrack(g4, 'l1');
   await go(g4, 'progression');
-  ok('elle rejoint le compte à l’inscription', /1 \/ 22/.test(await text(g4, '.kpis')));
+  ok('elle rejoint le compte à l’inscription', /Chapitres lus ?1 \/ \d+/.test(await text(g4, '.kpis')));
 
   console.log('\nAdministration');
   var d5 = await newPage(browser), a = d5.page;
@@ -412,7 +412,7 @@ function rpcResult(p, name, args) { return p.evaluate(function (a) { return TCL.
   ok('visiteur : le catalogue n’est pas mis en cache', !(await cached()));
   await login(o, 'offline@exemple.org', 'Offline');
   await chooseTrack(o, 'l2');
-  await o.waitForTimeout(800);
+  await o.waitForFunction(function () { var s = TCL.access.scope(), f = []; s.core.concat(s.prerequisites).forEach(function (id) { f = f.concat(TCL.content.filesOf(id)); }); return Promise.all(f.map(function (u) { return caches.match(u); })).then(function (r) { return r.every(Boolean); }); }, null, { timeout: 20000 });
   ok('étudiant : le catalogue est disponible hors ligne', await cached());
   await c4.ctx.setOffline(true);
   await o.reload(); await o.waitForTimeout(1200);

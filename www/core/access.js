@@ -155,6 +155,12 @@
     });
   }
 
+  /** Demande au service worker de conserver ces fichiers, même s'il ne contrôlait pas encore la page. */
+  function keepOffline(list) {
+    if (!root.TCL_BUILD || !root.TCL_BUILD.sw || !navigator.serviceWorker) return;
+    navigator.serviceWorker.ready.then(function (r) { if (r.active) r.active.postMessage({ keep: list }); }).catch(function () { /* facultatif */ });
+  }
+
   /** Ce qu'il faut télécharger ; null : le parcours n'est pas encore connu, on attend. */
   function wanted() {
     var m = mode();
@@ -163,7 +169,7 @@
     if (m === 'open') return all;
     var t = track();
     if (t.state === 'missing') return [];
-    if (t.state === 'unknown') return O.get().status === 'loading' || TCL.sync.status().state === 'syncing' ? null : all;
+    if (t.state === 'unknown') return O.get().status === 'loading' || O.get().status === 'signed_out' || TCL.sync.status().state === 'syncing' ? null : all;
     var s = scope();
     return s.core.concat(s.prerequisites, s.other);
   }
@@ -176,7 +182,7 @@
     if (loading) return loading.then(load);
     var todo = missing(list), src = KIT.slice();
     todo.forEach(function (id) { src = src.concat(filesOf(id)); });
-    loading = Promise.all(src.map(loadScript)).then(function () { todo.forEach(function (id) { loadedModules[id] = 1; }); loading = null; }, function (e) { loading = null; throw e; });
+    loading = Promise.all(src.map(loadScript)).then(function () { todo.forEach(function (id) { loadedModules[id] = 1; }); loading = null; keepOffline(src); }, function (e) { loading = null; throw e; });
     return loading;
   }
 

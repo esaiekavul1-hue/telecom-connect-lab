@@ -125,6 +125,8 @@ async function suiteC(browser) {
   var got = Array.from(new Set(urls));
   ok('Licence 1 : son parcours est téléchargé', ['ac', 'diodes', 'fourier', 'iot-capteurs', 'ordinateur'].every(function (x) { return got.indexOf(x) >= 0; }), got.join(','));
   ok('Licence 1 : pas la 5G ni le satellite', got.indexOf('5g') < 0 && got.indexOf('satellite') < 0 && got.indexOf('fibre') < 0, got.join(','));
+  urls.length = 0; await page.reload(); await page.waitForFunction(function () { return TCL.content.ready(); }, null, { timeout: 15000 }); await page.waitForTimeout(400);
+  ok('après rechargement : toujours uniquement le parcours', urls.indexOf('5g') < 0 && urls.indexOf('ac') >= 0, Array.from(new Set(urls)).join(','));
   await page.goto(SITE + '#/lecons/5g'); await page.waitForTimeout(350);
   ok('module hors parcours : refusé', /Hors de votre parcours/.test(await page.textContent('main')));
   await page.goto(SITE + '#/laboratoire/ac'); await page.waitForTimeout(450);
