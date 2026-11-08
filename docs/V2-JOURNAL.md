@@ -7,10 +7,12 @@ Branche : `v2`. Point de retour de la V1 : tag `v1-baseline`. Rien n'a été pub
 | Commande | Effet |
 |---|---|
 | `npm run dev` | Site et serveur local sur http://localhost:8080. Le code de connexion s'affiche dans le terminal. `admin@local.test` est administrateur. Aucune donnée n'atteint Supabase. |
-| `npm test` | Calculs, moteur de maîtrise, SQL et RLS, passerelle IA. |
+| `npm test` | Calculs, moteur de maîtrise, contenus des modules, SQL et RLS, passerelle IA. |
 | `npm run test:e2e` | Parcours V1 dans Chromium. |
 | `npm run test:e2e:v2` | Parcours V2 dans Chromium (serveur local). |
+| `npm run test:e2e:catalogue` | Parcourt tout le catalogue dans Chromium, ordinateur et téléphone. |
 | `npm run build` | Régénère la banque SQL et le dossier `www`. |
+| `node tools/catalogue-report.js` | Régénère `docs/CATALOGUE.md`. |
 | `npm run cap:sync` | `build` puis copie vers Android et iOS. |
 
 ## Espace public et parcours
@@ -22,7 +24,7 @@ Branche : `v2`. Point de retour de la V1 : tag `v1-baseline`. Rien n'a été pub
 | Quand le parcours est-il demandé ? | Seulement si le serveur confirme son absence. Coupure, panne ou profil en cours de chargement : jamais. |
 | Écriture du parcours | `choose_initial_track` (une fois), `change_track` (entrée vérifiée). Écriture directe refusée. |
 | Service non activé | Le choix est conservé avec la progression du compte, puis transmis au profil dès l'activation, sans redemander. |
-| Catalogue | Téléchargé après la connexion (`core/access.js`). Démonstration : `modules/decouverte/`, `pages/public.js`. |
+| Catalogue | Téléchargé après la connexion, seulement pour le parcours (`core/access.js`). Démonstration : `modules/decouverte/`, `pages/public.js`. |
 
 ## Architecture
 
@@ -32,6 +34,9 @@ JS sans étape de compilation, pour rester léger sur les téléphones modestes.
 |---|---|
 | Référentiel des 6 espaces | `core/curriculum.js` (seul fichier à modifier pour adapter un programme) |
 | Moteur de maîtrise | `core/mastery.js` |
+| Modules ajoutés | `modules/<id>/<id>.js`, un fichier sans DOM : calculs, leçon, laboratoire, exercices |
+| Écriture des modules | `core/module-kit.js`, `core/lab-engine.js`, `core/schematic.js` |
+| Registre scientifique | `docs/VERIFICATION-SCIENTIFIQUE.md` |
 | API et données officielles | `core/platform.js` |
 | Pages V2 | `pages/parcours.js`, `exams.js`, `assistant.js`, `dashboard.js`, `admin.js` |
 | Serveur | `supabase/migrations/`, annulation dans `supabase/rollback/` |
@@ -41,6 +46,8 @@ JS sans étape de compilation, pour rester léger sur les téléphones modestes.
 
 Règle centrale : `public.progress` reste le carnet personnel, modifiable par l'étudiant.
 Seules les fonctions SQL écrivent dans `competency_validations`, après correction serveur.
+
+Un module d'évaluation doit exister dans `core/curriculum.js` et dans `content/assessments/`.
 
 Les pages de cours restent librement accessibles : les prérequis ferment l'évaluation, pas l'apprentissage.
 
@@ -53,14 +60,15 @@ Les pages de cours restent librement accessibles : les prérequis ferment l'éva
 - Sessions conservées lors des coupures et des pannes du service.
 - Six espaces, cours, statuts, seuils configurables.
 - Évaluations : QCM, numérique, texte, dépannage par QCM, variantes de paramètres, chronomètre serveur, tentatives limitées, délai, reprise, correction détaillée, remédiation, positionnement.
-- Module complet Circuits électriques : leçon, laboratoire à solveur nodal, 9 exercices, évaluation.
+- 40 modules dans les quatre domaines : leçon, laboratoire, exercices, évaluation serveur (`docs/CATALOGUE.md`).
+- Assistant : présenté publiquement, interface et contexte de leçon ou de laboratoire prêts, indisponibilité affichée tant qu'aucun fournisseur n'est branché.
 - Mon espace, attestation interne, administration (comptes, évaluations, supervision, seuils, IA, incidents, audit).
 - Hors ligne web par service worker ; contenus embarqués dans l'APK.
 
 ### Partiellement opérationnel
 - Cours marqués « couverture partielle » : ils réunissent les modules existants sans couvrir tout l'intitulé.
 - Administration des contenus : présentation et seuils uniquement. Leçons et laboratoires restent dans le code.
-- Types d'évaluation : pas encore de TP virtuel noté par le serveur ni de résolution de problème à plusieurs étapes.
+- Types d'évaluation : pas de TP virtuel noté par le serveur. Les missions de laboratoire restent de l'entraînement, vérifié côté navigateur.
 - Conflits de synchronisation : fusion automatique existante, sans écran de résolution.
 - Filtrage par parcours : seules les évaluations sont contrôlées par le serveur. Leçons et laboratoires sont des fichiers statiques : l'interface les réserve, mais un fichier reste téléchargeable par son adresse.
 
@@ -75,12 +83,11 @@ Dans cet ordre, sur le projet Supabase existant :
 5. Publier `www` sur Netlify, reconstruire l'APK.
 
 ### Nécessite une validation scientifique
-- Banque de questions (95 questions) et leçon Circuits : relecture par un enseignant avant tout usage à enjeu.
+- Leçons, laboratoires et 323 questions : relecture par un enseignant avant tout usage à enjeu.
 - Correspondance entre les cours proposés et les référentiels réels.
 
 ### Non encore développé
-- Contenus : tous les cours « Programme à développer », dont tout le Master.
-- Laboratoires demandés absents : électronique analogique et numérique, routage dynamique, IoT et embarqué.
+- Laboratoires dédiés absents : routage dynamique, oscillateurs, organisation des fichiers.
 - Rôle enseignant : le rôle existe, sans espace dédié.
 - Partenariats et sponsors : aucun mécanisme, aucune publicité.
 
@@ -98,7 +105,7 @@ Dans cet ordre, sur le projet Supabase existant :
 - `script.js.bak` (présent avant la V2) n'est pas suivi par Git.
 
 ## Priorités suggérées
-1. Validation du fondateur en mode local, puis activation serveur.
-2. Module Électronique numérique, puis Électronique analogique.
-3. TP virtuels notés par le serveur.
-4. Laboratoires routage et IoT.
+1. Validation du fondateur en mode local.
+2. Relecture scientifique par un enseignant, en commençant par les évaluations.
+3. Activation serveur (dans l'ordre ci-dessus).
+4. TP virtuels notés par le serveur ; activation de l'assistant dans une phase distincte.

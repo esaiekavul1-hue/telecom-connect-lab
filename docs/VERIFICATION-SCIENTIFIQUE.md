@@ -17,11 +17,11 @@ Aucun contenu n'a été relu par un enseignant. Aucune mesure n'a été faite su
 | ETSI TS 138 306 V16.1.0 (3GPP) §4.1.2 | Débit max (Mbit/s) = 10⁻⁶ · v · Qm · f · Rmax · (N_PRB · 12 / Ts) · (1 − OH) ; Rmax = 948/1024 ; Ts = 10⁻³/(14 · 2^µ) ; OH = 0,14 FR1 DL, 0,18 FR2 DL, 0,08 FR1 UL, 0,10 FR2 UL | 5g |
 | ETSI TS 138 101-1 V16.5.0, table 5.3.2-1 | N_RB : 15 kHz → 25/52/79/106/133/160/216/270 (5 à 50 MHz) ; 30 kHz → 11/24/38/51/65/78/106/133/162/189/217/245/273 (5 à 100 MHz). La mise en page extraite mélange les libellés ; les valeurs concordent avec les largeurs | 5g |
 | ETSI EN 300 220-2 V3.2.1 | Le cycle d'émission dépend de la sous-bande : 868,7-869,2 MHz : 25 mW e.r.p., 0,1 % ou accès poli ; 869,4-869,65 MHz : 1 % ou accès poli | iot-com |
-| Semtech SX1276/77/78/79, §4.1.1.7 | Tpreamble = (n + 4,25) Ts ; n_payload = 8 + max(⌈(8PL − 4SF + 28 + 16CRC − 20IH) / (4(SF − 2DE))⌉ (CR + 4), 0) ; SF 6 à 12 ; sensibilité −111 à −148 dBm | iot-com |
+| Semtech SX1276/77/78/79, §4.1.1.7 | Tpreamble = (n + 4,25) Ts ; n_payload = 8 + max(⌈(8PL − 4SF + 28 + 16CRC − 20IH) / (4(SF − 2DE))⌉ (CR + 4), 0) ; SF 6 à 12 ; SNR limite −5 à −20 dB selon SF ; sensibilité −111 à −148 dBm | iot-com |
 | OASIS MQTT 3.1.1 | QoS 0/1/2 et paquets associés ; jokers + et # ; interdits dans un nom de topic publié ; message retenu ; testament ; Keep Alive × 1,5 ; ports 1883 et 8883 | iot-mqtt |
 | OASIS MQTT 5.0 | Trois niveaux de QoS confirmés dans le résumé ; Will Delay Interval nommé. Lecture partielle | iot-mqtt |
-| Espressif ESP32 Series Datasheet v5.3 | ADC SAR 12 bits jusqu'à 18 canaux ; deep-sleep 10 µA ; jusqu'à 240 MHz ; RX Wi-Fi 95-100 mA ; TX 802.11b 1 Mbit/s +19,5 dBm 240 mA ; g 54 Mbit/s 190 mA ; n MCS7 180 mA ; TX BLE 0 dBm 130 mA | iot-intro, iot-energie |
-| Microchip ATmega328P | ADC 10 bits ; flash 32 Ko ; SRAM 2 Ko ; EEPROM 1 Ko ; 16 MHz | iot-intro |
+| Espressif ESP32 Series Datasheet v5.3 | ADC SAR 12 bits jusqu'à 18 canaux ; deep-sleep 10 µA ; jusqu'à 240 MHz ; RX Wi-Fi 95-100 mA ; TX 802.11b 1 Mbit/s +19,5 dBm 240 mA ; g 54 Mbit/s 190 mA ; n MCS7 180 mA ; TX BLE 0 dBm 130 mA ; broches : environ 40 mA en sortie haute et 28 mA en sortie basse, typiques | iot-intro, iot-energie |
+| Microchip ATmega328P | ADC 10 bits ; flash 32 Ko ; SRAM 2 Ko ; EEPROM 1 Ko ; 16 MHz ; 40 mA maximum absolu par broche | iot-intro |
 | Arduino UNO R3 (docs.arduino.cc) | Basée sur ATmega328P, 6 entrées analogiques, 16 MHz | iot-intro |
 | NIST IR 8259A | Socle : identification, configuration, protection des données, accès logique aux interfaces, mise à jour logicielle, connaissance de l'état de cybersécurité | iot-energie |
 | NIST SP 800-145 | 5 caractéristiques essentielles, 3 modèles de service, 4 modèles de déploiement | cloud |
@@ -77,6 +77,27 @@ Informatique et IoT : complément à deux, double précision, von Neumann, cycle
 | LTE : 15 kHz, 12 sous-porteuses, 1 ms | C | Numérologie µ = 0 de TS 38.211, identique au principe LTE ; LTE lui-même non confirmé |
 | Classes LoRaWAN A/B/C | R | Seule la classe B est confirmée par la page lue |
 | Trois canaux d'annonce BLE | R | Résumé seulement |
+
+## Tests numériques effectués
+
+- `tests/run-content-tests.js` : pour chaque module, valeurs limites (min, max, 60 tirages), absence de valeur invalide, mission réalisable et non acquise au départ, corrigé accepté et mauvaise réponse refusée.
+- `tests/content-references.js` : 54 cas de référence, calculés à la main ou lus dans les documents ci-dessus. Exemples : Thévenin comparé au solveur nodal sur 40 circuits ; SNR de quantification mesuré ; BER 16-QAM contre Monte-Carlo (1,6 million de bits) ; Hamming(7,4) exhaustif ; Erlang B contre la somme directe ; exemple OSTEP 110 s et 50 s ; topics MQTT de la spécification ; temps d'antenne LoRa recalculé.
+- Toutes les figures techniques ont été contrôlées visuellement sur une planche. Cette relecture a corrigé le pont de Graetz, le raccordement du transistor et l'échelle R-2R.
+
+## Écart constaté
+
+Un calculateur tiers vu en recherche annonçait 2 793,472 ms pour 59 octets en SF12. La formule de la fiche Semtech, calculée à la main, donne 2 629,632 ms (68 symboles de charge). Les hypothèses du calculateur sont inconnues : la plateforme applique la formule de la fiche.
+
+## Statut par domaine
+
+| Domaine | Modules ajoutés | Niveau de preuve |
+|---|---|---|
+| Électronique | ac, analyse, diodes, transistors, aop, logique, can, mesures, rf | S et C ; lois de circuits en R pour les énoncés généraux |
+| Télécommunications | fourier, numerique, multiplexage, qualite, satellite, 5g, sans-fil, ingenierie | S et C ; 5G NR en S (3GPP) |
+| Informatique | binaire, ordinateur, systemes, reseaux-info, donnees, cloud, maintenance | S (RFC, NIST, OSTEP) et R pour les descriptions générales |
+| IoT | iot-intro, iot-capteurs, iot-com, iot-mqtt, iot-energie, iot-projets | S (fiches, OASIS, NIST) et C ; le modèle thermique de la serre est illustratif |
+
+Les 10 modules V1 n'ont pas été revérifiés ici, sauf par leurs tests existants.
 
 ## Réserves
 

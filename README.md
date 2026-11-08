@@ -3,7 +3,7 @@
 **Apprendre · Simuler · Comprendre**
 *Du réel au virtuel. De la théorie à la pratique.*
 
-TELECOM CONNECT LAB est une plateforme éducative pour les étudiants en télécommunications. Elle complète les cours des enseignants avec des leçons illustrées, un laboratoire de simulation, des exercices corrigés et un suivi de progression.
+TELECOM CONNECT LAB est une plateforme éducative en télécommunications, électronique, informatique et Internet des objets. Elle complète les cours des enseignants avec des leçons illustrées, un laboratoire de simulation, des exercices corrigés et un suivi de progression.
 
 Ce document s’adresse à une personne qui ne sait pas programmer. Chaque étape est décrite pas à pas.
 

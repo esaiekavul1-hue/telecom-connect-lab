@@ -11,7 +11,7 @@
 })(typeof window !== 'undefined' ? window : globalThis, function (K) {
   'use strict';
   var fN = K.fN, si = K.si, v = K.v, S = K.S;
-  var BOARDS = { uno: { name: 'Arduino Uno (ATmega328P)', vcc: 5, adc: 10, flash: 32, sram: 2, mhz: 16, imax: 40, wifi: false }, esp32: { name: 'ESP32', vcc: 3.3, adc: 12, flash: 4096, sram: 520, mhz: 240, imax: 40, wifi: true } };
+  var BOARDS = { uno: { name: 'Arduino Uno (ATmega328P)', vcc: 5, adc: 10, mhz: 16, imax: 40, wifi: false }, esp32: { name: 'ESP32', vcc: 3.3, adc: 12, mhz: 240, imax: 28, wifi: true } };
   function ledR(V, Vf, I) { return (V - Vf) / I; }
   function ledI(V, Vf, R) { return Math.max(V - Vf, 0) / R; }
   function dataRate(sensors, bytes, periodS) { return sensors * bytes * 8 / periodS; }
@@ -66,10 +66,10 @@
     explain: function (s, m) { return '<p>La broche fournit ' + m.b.vcc + ' V. La LED chute ' + fN(s.Vf) + ' V : la résistance de ' + si(s.R, 'Ω') + ' laisse passer ' + si(m.I, 'A') + '. Le nœud émet en moyenne ' + fN(m.rate) + ' bit/s.</p>'; },
     missions: [
       { id: 'm1', title: 'Dimensionner la résistance', text: 'Sur Uno, avec Vf = 2 V, obtenez un courant de 10 mA (à 5 % près).', solution: { board: 'uno', Vf: 2, R: 300 }, check: function (s, m) { if (s.board !== 'uno' || s.Vf !== 2) return { ok: false, msg: 'Sélectionnez Uno et V_f = 2 V.' }; return Math.abs(m.I - 0.01) <= 0.0005 ? { ok: true, msg: 'Réussi : I = ' + si(m.I, 'A') + '.' } : { ok: false, msg: 'Courant actuel : ' + si(m.I, 'A') + '. Ajustez R.' }; } },
-      { id: 'm2', title: 'Détecter un danger', text: 'Trouvez un réglage qui dépasserait la limite de 40 mA.', solution: { R: 10 }, check: function (s, m) { return m.over ? { ok: true, msg: 'Réussi : ' + si(m.I, 'A') + ' : sur un vrai montage, la broche pourrait être endommagée.' } : { ok: false, msg: 'Courant actuel : ' + si(m.I, 'A') + '.' }; } },
+      { id: 'm2', title: 'Détecter un danger', text: 'Trouvez un réglage qui dépasserait la limite de courant de la broche.', solution: { R: 10 }, check: function (s, m) { return m.over ? { ok: true, msg: 'Réussi : ' + si(m.I, 'A') + ' : sur un vrai montage, la broche pourrait être endommagée.' } : { ok: false, msg: 'Courant actuel : ' + si(m.I, 'A') + '.' }; } },
       { id: 'm3', title: 'Passer en 3,3 V', text: 'Sur ESP32, avec une LED bleue de 3,2 V, constatez que le courant devient très faible.', solution: { board: 'esp32', Vf: 3.2, R: 100 }, check: function (s, m) { if (s.board !== 'esp32' || s.Vf !== 3.2) return { ok: false, msg: 'Choisissez ESP32 et V_f = 3,2 V.' }; return m.I <= 0.0011 ? { ok: true, msg: 'Réussi : marge de tension trop faible, seulement ' + si(m.I, 'A') + '.' } : { ok: false, msg: 'Courant : ' + si(m.I, 'A') + '.' }; } },
       { id: 'm4', title: 'Un clignotement à 2 Hz', text: 'Réglez un clignotement à 2 Hz avec un rapport cyclique de 25 %.', solution: { on: 120, off: 380 }, check: function (s, m) { return Math.abs(m.f - 2) <= 0.05 && Math.abs(m.dc - 0.25) <= 0.02 ? { ok: true, msg: 'Réussi : t_on = ' + s.on + ' ms, t_off = ' + s.off + ' ms.' } : { ok: false, msg: 'f = ' + fN(m.f) + ' Hz, rapport ' + fN(m.dc * 100) + ' %.' }; } }],
-    limits: '<p>Carte simulée, sans matériel réel. Le courant suppose une LED à tension fixe. Le modèle ignore la résistance interne des broches et le temps d’exécution du programme. Les limites indiquées sont des maxima de fiches techniques, à ne pas utiliser comme valeurs de fonctionnement.</p>' };
+    limits: '<p>Carte simulée, sans matériel réel. Le courant suppose une LED à tension fixe. Le modèle ignore la résistance interne des broches et le temps d’exécution du programme. Limites retenues : 40 mA pour l’ATmega328P (maximum absolu de sa fiche) et 28 mA pour l’ESP32 (courant typique en sortie basse ; environ 40 mA en sortie haute, en baisse quand plusieurs broches débitent). Ce sont des repères à ne pas utiliser comme valeurs de fonctionnement.</p>' };
 
   var list = [
     K.num('e1', 'Résistance de LED', 'Microcontrôleurs', '<p>3,3 V, LED de 2,1 V, courant 6 mA. Calculez R, en Ω.</p>', ledR(3.3, 2.1, 0.006), 'Ω', { rel: 0.02 }, '<p>(3,3 − 2,1)/0,006 = 200 Ω.</p>'),
