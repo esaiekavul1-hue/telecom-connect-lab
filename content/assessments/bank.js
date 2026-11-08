@@ -254,4 +254,6 @@ bank.ip = [
     explanation: '<p>Tout trafic hors du sous-réseau passe par la passerelle : si elle manque ou est fausse, seul le réseau local répond.</p>' }; })
 ];
 
+Object.assign(bank, require('./bank-v2.js'));
+
 module.exports = bank;

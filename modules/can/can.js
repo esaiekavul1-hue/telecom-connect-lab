@@ -20,7 +20,7 @@
   /** SNR mesuré d'une sinusoïde pleine échelle quantifiée. */
   function measuredSnr(N, samples) {
     var q = 2 / Math.pow(2, N), ps = 0, pn = 0, c = samples || 200000;
-    for (var i = 0; i < c; i++) { var x = (1 - q / 2) * Math.sin(TAU * i * 0.123456789), y = Math.floor(x / q) * q + q / 2; ps += x * x; pn += (x - y) * (x - y); }
+    for (var i = 0; i < c; i++) { var x = (1 - q / 2) * Math.sin(TAU * i * 0.6180339887), y = Math.floor(x / q) * q + q / 2; ps += x * x; pn += (x - y) * (x - y); }
     return 10 * K.log10(ps / pn);
   }
   var math = { lsb: lsb, code: code, sqnr: sqnr, alias: alias, r2r: r2r, measuredSnr: measuredSnr };

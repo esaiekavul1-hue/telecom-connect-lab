@@ -7,9 +7,10 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "node tests/run-unit-tests.js && node tests/run-v2-unit-tests.js && node tests/run-server-tests.js && deno test --no-check supabase/functions/ai-tutor/handler.test.ts",
+    "test": "node tests/run-unit-tests.js && node tests/run-v2-unit-tests.js && node tests/run-content-tests.js && node tests/run-server-tests.js && deno test --no-check supabase/functions/ai-tutor/handler.test.ts",
     "test:e2e": "node tests/e2e.js",
     "test:e2e:v2": "node tests/e2e-v2.js",
+    "test:e2e:catalogue": "node tests/e2e-catalogue.js",
     "dev": "node tools/dev-server.js",
     "generate:assessments": "node tools/generate-assessments.js",
     "build": "node tools/generate-assessments.js && node tools/build-www.js",

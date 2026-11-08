@@ -91,10 +91,10 @@ test('recommandations : l’échec passe avant le reste', function () {
 test('cours sans module : « à développer »', function () { assert.strictEqual(MA.courseState({ modules: [] }, ctx()).status, 'planned'); });
 
 console.log('\nRéférentiel et banque');
-test('six espaces ; modules référencés existants ; Master sans cours disponible', function () {
+test('six espaces ; modules référencés existants ; Master avec des cours réels', function () {
   assert.deepStrictEqual(CUR.spaces.map(function (s) { return s.id; }), ['preparatoire', 'l1', 'l2', 'l3', 'master', 'pro']);
   CUR.spaces.forEach(function (s) { s.courses.forEach(function (c) { c.modules.forEach(function (m) { assert.ok(CUR.competencies[m], m); }); }); });
-  assert.strictEqual(CUR.modulesOfSpace(CUR.spaceById('master')).length, 0);
+  assert.ok(CUR.modulesOfSpace(CUR.spaceById('master')).length >= 6);
 });
 test('graphe des prérequis sans cycle', function () {
   var seen = {};
@@ -123,20 +123,20 @@ console.log('\nParcours');
 function ids(x) { return x.slice().sort(); }
 test('Licence 1 : ses modules, sans ceux des autres niveaux', function () {
   var m = CUR.trackModules('l1', null);
-  assert.deepStrictEqual(ids(m.core), ['chaine', 'circuits', 'ip', 'signaux']); assert.deepStrictEqual(m.prerequisites, []);
+  assert.deepStrictEqual(ids(m.core), ['ac', 'analyse', 'chaine', 'circuits', 'diodes', 'fourier', 'iot-capteurs', 'ip', 'mesures', 'signaux', 'systemes']); assert.deepStrictEqual(ids(m.prerequisites), ['binaire', 'iot-intro', 'ordinateur']); assert.ok(m.core.indexOf('fibre') < 0);
 });
 test('Licence 2 : le prérequis venu d’un autre niveau est identifié à part', function () {
   var m = CUR.trackModules('l2', null);
-  assert.ok(m.core.indexOf('fibre') >= 0 && m.core.indexOf('circuits') < 0); assert.deepStrictEqual(m.prerequisites, ['signaux']);
+  assert.ok(m.core.indexOf('fibre') >= 0 && m.core.indexOf('circuits') < 0); assert.ok(m.prerequisites.indexOf('signaux') >= 0 && m.prerequisites.indexOf('circuits') >= 0); assert.ok(m.core.indexOf('5g') < 0);
 });
 test('Licence 3 : mobiles et tous ses prérequis', function () {
-  assert.deepStrictEqual(ids(CUR.trackModules('l3', null).prerequisites), ['modulation', 'ondes-em', 'propagation', 'signaux']);
+  var m = CUR.trackModules('l3', null); assert.ok(m.core.indexOf('mobiles') >= 0); ['modulation', 'ondes-em', 'propagation', 'signaux'].forEach(function (p) { assert.ok(m.prerequisites.indexOf(p) >= 0, p); });
 });
-test('Master : aucun module disponible, aucun contenu présenté', function () { assert.deepStrictEqual(CUR.trackModules('master', null), { core: [], prerequisites: [] }); });
+test('Master : contenus avancés propres, pas ceux de L1', function () { var m = CUR.trackModules('master', null); assert.deepStrictEqual(ids(m.core), ['5g', 'cloud', 'ingenierie', 'iot-projets', 'rf', 'satellite']); assert.ok(m.core.indexOf('binaire') < 0); });
 test('spécialisation : restreint au métier, avec ses prérequis', function () {
   var m = CUR.trackModules('pro', 'pro-fibre');
-  assert.deepStrictEqual(m.core, ['fibre']); assert.deepStrictEqual(ids(m.prerequisites), ['ondes-em', 'signaux']);
-  assert.deepStrictEqual(CUR.trackModules('pro', 'pro-iot').core, []);
+  assert.deepStrictEqual(m.core, ['fibre', 'qualite']); assert.deepStrictEqual(ids(m.prerequisites), ['chaine', 'ondes-em', 'signaux']);
+  assert.ok(CUR.trackModules('pro', 'pro-iot').core.indexOf('iot-mqtt') >= 0); assert.ok(CUR.trackModules('pro', 'pro-iot').core.indexOf('fibre') < 0);
 });
 test('fermeture des prérequis : chaque évaluation d’un parcours a ses prérequis dans ce parcours', function () {
   CUR.trackList().forEach(function (t) { t.competencies.forEach(function (c) { CUR.competencies[c].prerequisites.forEach(function (p) { assert.ok(t.competencies.indexOf(p) >= 0, t.key + ' : ' + p); }); }); });
