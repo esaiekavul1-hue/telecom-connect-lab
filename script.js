@@ -41,6 +41,8 @@
     // Tant que le parcours n'est pas choisi, aucune rubrique n'est proposée.
     onboarding: []
   };
+  // Ajoutée au menu de tout compte dont le profil serveur porte le rôle « admin », parcours choisi ou non.
+  var ADMIN_LINK = { id: 'admin', href: '#/admin', label: 'Administration', icon: 'lock' };
 
   var ROUTES = [
     { re: /^\/?$/, page: 'home', nav: 'home' },
@@ -63,7 +65,7 @@
     { re: /^\/mon-espace\/?$/, page: 'dashboard', nav: 'dashboard' },
     { re: /^\/bienvenue\/?$/, page: 'welcome', nav: 'dashboard' },
     { re: /^\/changer-parcours\/?$/, page: 'trackChange', nav: 'dashboard' },
-    { re: /^\/admin\/?$/, page: 'admin', nav: 'dashboard' },
+    { re: /^\/admin\/?$/, page: 'admin', nav: 'admin' },
     { re: /^\/connexion\/?$/, page: 'login', nav: 'login', fixed: { mode: 'login' } },
     { re: /^\/inscription\/?$/, page: 'login', nav: 'login', fixed: { mode: 'signup' } }
   ];
@@ -227,11 +229,13 @@
 
   /* --------------------------------- En-tête --------------------------------- */
 
-  function navKey() {
+  function baseNavKey() {
     if (TCL.auth.state().status === 'checking') return 'onboarding';
     var mode = TCL.access.mode();
     return mode === 'student' && TCL.access.track().state === 'missing' ? 'onboarding' : mode;
   }
+  function isAdmin() { return TCL.auth.state().status === 'signedIn' && TCL.official.isAdmin(); }
+  function navKey() { return baseNavKey() + (isAdmin() ? '+admin' : ''); }
 
   var builtNav = null;
 
@@ -244,9 +248,10 @@
     }
 
     builtNav = key;
+    var base = baseNavKey();
 
-    var links = NAVS[key].map(function (n) {
-      return '<li><a class="nav__link" href="' + n.href +
+    var links = NAVS[base].concat(isAdmin() ? [ADMIN_LINK] : []).map(function (n) {
+      return '<li><a class="nav__link' + (n.id === 'admin' ? ' nav__link--admin" title="' + n.label : '') + '" href="' + n.href +
         '" data-nav="' + n.id + '">' + I(n.icon) +
         '<span>' + n.label + '</span></a></li>';
     }).join('');
@@ -255,7 +260,7 @@
       links + '<li class="nav__auth" id="nav-auth"></li>';
 
     renderAuthNav();
-    renderFooterLinks(key);
+    renderFooterLinks(base);
     setActiveNav(parse().route.nav);
   }
 

@@ -274,3 +274,8 @@
 .pro-ask .check { margin-bottom: 4px; }
 .pro-ask #pro-box { margin-top: 12px; }
 .control textarea { width: 100%; border: 1px solid var(--line-strong); border-radius: 8px; padding: 10px; font: inherit; resize: vertical; background: #fff; color: var(--ink); }
+/* Menu administrateur : icône seule entre 1101 et 1440 px, libellé conservé pour les lecteurs d’écran. */
+@media (max-width: 1440px) and (min-width: 1101px) {
+  .nav__link.nav__link--admin .icon { display: inline; }
+  .nav__link.nav__link--admin span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}

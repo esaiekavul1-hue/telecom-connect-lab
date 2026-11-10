@@ -349,14 +349,28 @@ function rpcResult(p, name, args) { return p.evaluate(function (a) { return TCL.
   console.log('\nAdministration');
   var d5 = await newPage(browser), a = d5.page;
   await login(a, 'admin@local.test', 'Admin');
-  await go(a, 'admin'); await a.waitForTimeout(500);
+  await a.waitForSelector('#nav-list [data-nav=admin]', { timeout: 8000 });
+  ok('administrateur sans parcours : menu Administration visible', await a.isVisible('#nav-list [data-nav=admin]'));
+  await a.click('#nav-list [data-nav=admin]'); await waitHash(a, '#/admin'); await a.waitForTimeout(500);
+  ok('menu Administration : rubrique active sur la page', /is-active/.test(await a.getAttribute('#nav-list [data-nav=admin]', 'class') || ''));
   ok('administration accessible avant le choix du parcours', (await a.$$('#adm .stat')).length === 8, await text(a, '#adm'));
   await a.click('[data-tab=users]'); await a.waitForTimeout(400);
   ok('parcours des comptes visible', /Licence 2/.test(await text(a, '#adm')));
   for (var t of ['pro', 'exams', 'reviews', 'content', 'ai', 'errors']) { await a.click('[data-tab=' + t + ']'); await a.waitForTimeout(350); }
   ok('tous les onglets s’ouvrent sans erreur', !/callout--error/.test(await a.innerHTML('#adm')));
   await go(q, 'admin');
-  ok('un étudiant est refusé', /Accès réservé/.test(await text(q, 'main')));
+  ok('un étudiant est refusé, sans menu Administration', /Accès réservé/.test(await text(q, 'main')) && (await q.$('#nav-list [data-nav=admin]')) === null);
+  await go(a, 'bienvenue');
+  await chooseTrack(a, 'l1');
+  ok('administrateur avec parcours : menu Administration conservé', (await a.$$('#nav-list [data-nav=admin]')).length === 1);
+  var aw = [];
+  for (var avw of [1101, 1280, 1440]) {
+    await a.setViewportSize({ width: avw, height: 800 }); await a.goto(S.site + '#/admin'); await a.waitForTimeout(300);
+    var adw = await a.evaluate(function () { var b = document.querySelector('#nav-auth').lastElementChild.getBoundingClientRect(); return Math.max(document.documentElement.scrollWidth - window.innerWidth, Math.ceil(b.right - window.innerWidth)); });
+    if (adw > 0) aw.push(avw + ':' + adw);
+  }
+  await a.setViewportSize({ width: 1280, height: 800 });
+  ok('en-tête administrateur complet de 1101 à 1440 px', aw.length === 0, aw.join(' '));
 
   console.log('\nAffichage');
   var m1 = await browser.newContext({ viewport: { width: 360, height: 700 }, deviceScaleFactor: 2, isMobile: true });
