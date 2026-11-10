@@ -30,7 +30,7 @@
     return new ApiError('server', MESSAGES.server, null, res.status);
   }
 
-  function call(method, path, body, headers) {
+  function call(method, path, body, headers, base) {
     var a = TCL.auth;
     if (!a.isConfigured()) return Promise.reject(new ApiError('not_deployed', 'La connexion n’est pas configurée sur cette installation.'));
     return a.getAccessToken().catch(function (e) {
@@ -38,7 +38,7 @@
       if (e && (e.code === 'server' || e.code === 'rate_limit')) throw new ApiError('network', MESSAGES.server);
       throw new ApiError('auth', 'Connectez-vous pour accéder à ce service.');
     }).then(function (token) {
-      return fetch(a.config.url + path, { method: method, headers: Object.assign({ apikey: a.config.key, Authorization: 'Bearer ' + token, 'Content-Type': 'application/json', Accept: 'application/json' }, headers || {}), body: body == null ? undefined : JSON.stringify(body) })
+      return fetch((base || a.config.url) + path, { method: method, headers: Object.assign({ apikey: a.config.key, Authorization: 'Bearer ' + token, 'Content-Type': 'application/json', Accept: 'application/json' }, headers || {}), body: body == null ? undefined : JSON.stringify(body) })
         .catch(function () { throw new ApiError('network', MESSAGES.network); })
         .then(function (res) {
           return res.text().then(function (t) {
@@ -59,7 +59,7 @@
     select: function (query) { return restCall('GET', query); },
     update: function (query, body) { return restCall('PATCH', query, body); },
     /** Passerelle IA : renvoie { status, data } sans lever d'erreur pour les statuts métier. */
-    tutor: function (body) { return call('POST', '/functions/v1/ai-tutor', body); }
+    tutor: function (body) { return call('POST', '/functions/v1/ai-tutor', body, null, (root.TCL_CONFIG || {}).aiGateway); }
   };
 
   /* ------------------------- Données officielles ------------------------- */

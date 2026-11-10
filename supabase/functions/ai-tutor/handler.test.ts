@@ -125,3 +125,9 @@ Deno.test("gemini : détail de l'erreur conservé, clé masquée, rien vers l'é
   const r = await handle(post(ok), deps({ provider: p }));
   assert.equal(r.status, 502); assert.deepEqual(await r.json(), { error: "provider_error" });
 });
+Deno.test("consigne : réponse directe par défaut, indice seulement sur demande", () => {
+  const d = buildSystemPrompt({});
+  assert.match(d, /Réponds directement à la question/); assert.match(d, /résous les exercices/); assert.match(d, /les calculs les plus simples/);
+  assert.doesNotMatch(d, /Ne donne ni le résultat final/);
+  assert.doesNotMatch(buildSystemPrompt({ mode: "error" }), /corrige lui-même/);
+});

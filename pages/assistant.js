@@ -98,7 +98,7 @@
       if (gone) return;
       if (r.res.status === 503 || r.res.status === 404) block('<strong>Service d’IA non connecté.</strong> L’interface est prête, mais aucun fournisseur de modèle n’est encore branché sur le serveur. Aucune réponse ne sera simulée.');
       else if (r.res.status === 401) block('Votre session n’est plus valide. <a href="#/connexion">Reconnectez-vous</a>.');
-    }).catch(function (e) { if (!gone && e.kind === 'network') block('L’assistant nécessite une connexion Internet.'); else if (!gone) block(esc(e.message)); });
+    }).catch(function (e) { if (!gone && e.kind === 'network') block(navigator.onLine === false ? 'L’assistant nécessite une connexion Internet.' : 'Le service de l’assistant est injoignable pour le moment.'); else if (!gone) block(esc(e.message)); });
 
     U.qsa('[data-mode]', main).forEach(function (b) {
       b.addEventListener('click', function () {
