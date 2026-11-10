@@ -79,12 +79,13 @@
       return;
     }
     var online = off.status === 'ready';
+    var directPro = (off.history || []).some(function (h) { return h.kind === 'initial' && h.to_space === 'pro'; });
     var cards = CUR.spaces.map(function (s) {
       var isCurrent = t.space === s.id;
-      var move = CUR.checkMove(t, { space: s.id, specialization: s.id === 'pro' ? (t.space === 'pro' ? t.specialization : null) : null }, off.validated);
+      var move = CUR.checkMove(t, { space: s.id, specialization: s.id === 'pro' ? (t.space === 'pro' ? t.specialization : null) : null }, off.validated, directPro);
       var body;
       if (isCurrent && s.id !== 'pro') body = P.statusBadge('Parcours actuel');
-      else if (move.allowed || move.same || s.id === 'pro') {
+      else if (move.allowed || move.same) {
         body = (isCurrent ? P.statusBadge('Parcours actuel') : '') + (s.id === 'pro' ? '<div class="control"><label for="spec-change">Spécialisation</label><select id="spec-change">' + specOptions(t.space === 'pro' ? t.specialization : '') + '</select></div>' : '') +
           '<button type="button" class="btn btn--primary btn--sm" data-move="' + s.id + '"' + (online ? '' : ' disabled') + '>' + (isCurrent ? 'Modifier ma spécialisation' : 'Choisir ce parcours') + '</button>';
       } else {
