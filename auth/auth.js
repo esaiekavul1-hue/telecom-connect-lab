@@ -136,8 +136,13 @@ function loadSession() {
     var low = (code + ' ' + msg).toLowerCase();
     if (status === 429 || /rate limit|only request this after/.test(low)) {
       var m = /after (\d+) seconds?/.exec(msg);
-      var wait = m ? Number(m[1]) : 60;
+      if (!m && /over_request_rate_limit|too many requests/.test(low)) return new AuthError('rate_limit', 'Trop de demandes depuis ce réseau. Réessayez dans quelques minutes.', { wait: 300 });
+      if (!m) return new AuthError('rate_limit', 'Le service a atteint sa limite d’envoi d’e-mails. Réessayez dans un moment.', { wait: 300 });
+      var wait = Number(m[1]);
       return new AuthError('rate_limit', 'Trop de demandes rapprochées. Patientez ' + wait + ' secondes avant de demander un nouveau code.', { wait: wait });
+    }
+    if (context === 'signup' && /otp_disabled|signups not allowed/.test(low)) {
+      return new AuthError('signup_disabled', 'Les inscriptions sont désactivées dans la configuration du service de connexion.');
     }
     if (/otp_disabled|signups not allowed|user not found/.test(low)) {
       return new AuthError('no_account', 'Aucun compte n’est associé à cette adresse. Créez d’abord votre compte (onglet « Créer un compte »).');
@@ -304,7 +309,7 @@ function loadSession() {
     var query = {};
     var redirect = cfg.siteUrl || (/^https?:/.test(root.location.protocol) ? root.location.origin + root.location.pathname : '');
     if (redirect) query.redirect_to = redirect;
-    return request('/auth/v1/otp', { body: body, query: query }).then(function () {
+    return request('/auth/v1/otp', { body: body, query: query, context: opts.mode === 'signup' ? 'signup' : undefined }).then(function () {
       pending.set({ email: email, mode: opts.mode, name: opts.name || '', sentAt: Date.now() });
       return true;
     });
