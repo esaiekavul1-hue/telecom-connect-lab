@@ -18,7 +18,7 @@ var { chromium } = require('playwright');
 var mock = require('./mock-supabase-server.js');
 
 var ROOT = path.join(__dirname, '..');
-var SITE_PORT = 8766, API_PORT = 54321;
+var SITE_PORT = 8766, API_PORT = Number(process.env.E2E_API_PORT) || 54321;
 var SITE = 'http://localhost:' + SITE_PORT + '/';
 var API = 'http://localhost:' + API_PORT;
 var SHOTS = process.env.SHOTS_DIR || null;
