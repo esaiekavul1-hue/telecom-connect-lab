@@ -72,12 +72,21 @@
   function saveCache() { try { root.localStorage.setItem(cacheKey(userId), JSON.stringify({ validated: state.validated, attempts: state.attempts, assessments: state.assessments, settings: state.settings, profile: state.profile, history: state.history })); } catch (e) { /* ignore */ } }
   function readCache(id) { try { return JSON.parse(root.localStorage.getItem(cacheKey(id)) || 'null'); } catch (e) { return null; } }
 
-  /* Choix fait avant l'activation du service : transmis une seule fois au profil, sans redemander. */
+  /*
+   * Choix fait avant l'activation du service : transmis une seule fois au profil, sans redemander.
+   * Le premier parcours est Préparatoire ou L1 ; un ancien choix plus élevé démarre en L1
+   * (Préparatoire pour le Monde professionnel, qui devient une demande à l'administration).
+   */
+  var INITIAL = ['preparatoire', 'l1'];
   function pushPendingTrack() {
     var pref = (TCL.store.get().prefs || {}).track;
     if (!state.profile || state.profile.space || !pref) return null;
-    return TCL.api.rpc('choose_initial_track', { p_space: pref.space, p_specialization: pref.specialization || null }).then(function (r) {
+    var pro = !!pref.pro || pref.space === 'pro';
+    var space = INITIAL.indexOf(pref.space) >= 0 ? pref.space : pref.space === 'pro' ? 'preparatoire' : 'l1';
+    return TCL.api.rpc('choose_initial_track', { p_space: space, p_specialization: null }).then(function (r) {
       state.profile.space = r.space; state.profile.specialization = r.specialization; saveCache();
+      if (!pro) return null;
+      return TCL.api.rpc('request_pro', { p_specialization: pref.proSpecialization || pref.specialization || null, p_message: pref.proMessage || null }).then(function (x) { state.profile.pro_status = x.pro_status; saveCache(); });
     }).catch(function () { /* nouvel essai au prochain chargement */ });
   }
 
@@ -90,7 +99,7 @@
       TCL.api.select('attempts?select=id,assessment_id,status,started_at,submitted_at,percent,passed,proctor_status,deadline_at&order=started_at.desc&limit=60'),
       TCL.api.select('assessments?select=id,title,description,kind,competency,question_count,pass_percent,duration_seconds,max_attempts,cooldown_minutes,requires_proctor,prerequisites,grants&order=id'),
       TCL.api.select('platform_settings?select=key,value'),
-      TCL.api.select('profiles?select=id,display_name,space,specialization,track_chosen_at,role&id=eq.' + encodeURIComponent(id)),
+      TCL.api.select('profiles?select=*&id=eq.' + encodeURIComponent(id)),
       TCL.api.select('track_history?select=from_space,from_specialization,to_space,to_specialization,kind,at&order=at.desc&limit=20')
     ]).then(function (r) {
       if (id !== userId) return state;

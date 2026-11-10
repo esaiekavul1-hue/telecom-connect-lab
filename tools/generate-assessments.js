@@ -33,10 +33,10 @@ function assessments() {
 }
 
 function sql(list) {
-  var s = ['-- FICHIER GÉNÉRÉ par tools/generate-assessments.js : ne pas modifier à la main.', '-- À exécuter après les deux migrations de supabase/migrations/. Peut être relancé sans risque.', 'begin;'];
+  var s = ['-- FICHIER GÉNÉRÉ par tools/generate-assessments.js : ne pas modifier à la main.', '-- À exécuter après les migrations de supabase/migrations/. Peut être relancé sans risque.', 'begin;'];
   list.forEach(function (a) {
-    s.push('insert into public.assessments (id,title,description,kind,competency,question_count,pass_percent,duration_seconds,max_attempts,cooldown_minutes,prerequisites,grants,status) values (' +
-      [lit(a.id), lit(a.title), lit(a.description), lit(a.kind), a.competency ? lit(a.competency) : 'null', a.count, a.pass, a.duration, a.maxAttempts || 'null', a.cooldown, arr(a.prerequisites), arr(a.grants), "'published'"].join(',') +
+    s.push('insert into public.assessments (id,title,description,kind,competency,question_count,pass_percent,duration_seconds,max_attempts,cooldown_minutes,show_correction,prerequisites,grants,status) values (' +
+      [lit(a.id), lit(a.title), lit(a.description), lit(a.kind), a.competency ? lit(a.competency) : 'null', a.count, a.pass, a.duration, a.maxAttempts || 'null', a.cooldown, a.kind === 'placement' ? 'false' : 'true', arr(a.prerequisites), arr(a.grants), "'published'"].join(',') +
       ') on conflict (id) do update set title=excluded.title, description=excluded.description, prerequisites=excluded.prerequisites, grants=excluded.grants;');
     a.questions.forEach(function (q) {
       s.push('insert into private.questions (id,assessment_id,skill,kind,variants) values (' + [lit(q.id), lit(a.id), lit(q.skill), lit(q.kind), json(q.variants)].join(',') +

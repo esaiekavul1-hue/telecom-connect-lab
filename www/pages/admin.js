@@ -7,7 +7,8 @@
   var TCL = root.TCL;
   var U = TCL.util, I = TCL.icon, esc = U.esc, P = TCL.pages, O = TCL.official, A = TCL.api, CUR = TCL.curriculum;
 
-  var TABS = [['stats', 'Vue d’ensemble'], ['users', 'Utilisateurs'], ['exams', 'Évaluations'], ['reviews', 'Supervision'], ['content', 'Parcours'], ['ai', 'Assistant IA'], ['errors', 'Incidents']];
+  var PRO_LABEL = { pending: 'demande pro en attente', approved: 'professionnel approuvé', rejected: 'demande pro refusée', legacy: 'pro à vérifier' };
+  var TABS = [['stats', 'Vue d’ensemble'], ['users', 'Utilisateurs'], ['pro', 'Accès professionnels'], ['exams', 'Évaluations'], ['reviews', 'Supervision'], ['content', 'Parcours'], ['ai', 'Assistant IA'], ['errors', 'Incidents']];
 
   function render(main) {
     if (!O.isAdmin()) {
@@ -34,7 +35,7 @@
         function load() {
           return A.rpc('admin_list_users', { p_search: U.qs('#u-q', host).value.trim(), p_limit: 50, p_offset: 0 }).then(function (list) {
             U.qs('#u-r', host).innerHTML = list.length ? table(['Compte', 'Nom', 'Parcours', 'Rôle', 'Validations', 'Tentatives', 'Dernière synchro'], list.map(function (u) {
-              return '<tr><td>' + esc(u.email) + '</td><td>' + esc(u.display_name || '') + '</td><td>' + esc(u.space ? CUR.trackLabel(u.space, null) : '—') + '</td><td><select data-role="' + u.id + '" aria-label="Rôle de ' + esc(u.email) + '">' + ['student', 'teacher', 'admin'].map(function (r) { return '<option value="' + r + '"' + (u.role === r ? ' selected' : '') + '>' + ({ student: 'Étudiant', teacher: 'Enseignant', admin: 'Administrateur' })[r] + '</option>'; }).join('') + '</select></td><td>' + u.validations + '</td><td>' + u.attempts + '</td><td>' + (u.last_sync ? esc(U.formatWhen(u.last_sync)) : '—') + '</td></tr>';
+              return '<tr><td>' + esc(u.email) + '</td><td>' + esc(u.display_name || '') + '</td><td>' + esc(u.space ? CUR.trackLabel(u.space, u.specialization || null) : '—') + (u.pro_status ? ' <span class="muted">· ' + esc(PRO_LABEL[u.pro_status] || u.pro_status) + '</span>' : '') + '</td><td><select data-role="' + u.id + '" aria-label="Rôle de ' + esc(u.email) + '">' + ['student', 'teacher', 'admin'].map(function (r) { return '<option value="' + r + '"' + (u.role === r ? ' selected' : '') + '>' + ({ student: 'Étudiant', teacher: 'Enseignant', admin: 'Administrateur' })[r] + '</option>'; }).join('') + '</select></td><td>' + u.validations + '</td><td>' + u.attempts + '</td><td>' + (u.last_sync ? esc(U.formatWhen(u.last_sync)) : '—') + '</td></tr>';
             })) : '<p class="muted">Aucun compte trouvé.</p>';
             U.qsa('[data-role]', host).forEach(function (s) {
               var prev = s.value;
@@ -47,6 +48,21 @@
         }
         U.qs('#u-f', host).addEventListener('submit', function (e) { e.preventDefault(); load().catch(fail); });
         return load();
+      },
+      pro: function () {
+        return A.rpc('admin_list_pro_requests').then(function (list) {
+          host.innerHTML = '<p class="muted">Demandes en attente et anciens comptes inscrits directement en professionnel. Approuver ouvre le Monde professionnel et tous les niveaux. Refuser ramène le compte au plus haut niveau dont il a validé l’entrée. Aucun résultat n’est supprimé.</p>' +
+            (list.length ? table(['Compte', 'Statut', 'Spécialisation', 'Expérience déclarée', 'Parcours actuel', 'Validations', 'Date', ''], list.map(function (r) {
+              return '<tr data-id="' + r.id + '"><td>' + esc(r.email) + (r.display_name ? '<br><span class="muted">' + esc(r.display_name) + '</span>' : '') + '</td><td>' + (r.pro_status === 'legacy' ? 'Ancien compte, à vérifier' : 'Demande en attente') + '</td><td>' + esc(CUR.trackLabel('pro', r.pro_specialization || null)) + '</td><td>' + esc(r.pro_message || '—') + '</td><td>' + esc(r.space ? CUR.trackLabel(r.space, r.specialization || null) : '—') + '</td><td>' + r.validations + '</td><td>' + esc(U.formatWhen(r.pro_requested_at || r.created_at)) + '</td><td><button class="btn btn--primary btn--sm" data-pro="1">Approuver</button> <button class="btn btn--danger btn--sm" data-pro="0">Refuser</button></td></tr>';
+            })) : '<p class="muted">Aucune demande à examiner.</p>');
+          U.qsa('[data-pro]', host).forEach(function (b) {
+            b.addEventListener('click', function () {
+              var yes = b.getAttribute('data-pro') === '1';
+              if (!root.confirm(yes ? 'Approuver l’accès professionnel de ce compte ?' : 'Refuser l’accès professionnel de ce compte ?')) return;
+              act(A.rpc('admin_decide_pro', { p_user: b.closest('tr').getAttribute('data-id'), p_approve: yes, p_note: null }), 'Décision enregistrée.').then(views.pro).catch(function () {});
+            });
+          });
+        });
       },
       exams: function () {
         return A.select('assessments?select=*&order=id').then(function (list) {

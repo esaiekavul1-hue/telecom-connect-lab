@@ -270,3 +270,7 @@
 .ai-consent { display: flex; gap: 8px; align-items: flex-start; margin-top: 10px; font-size: 14px; color: var(--ink-2); }
 .ai-consent[hidden] { display: none; }
 .ai-consent input { margin-top: 3px; flex: 0 0 auto; }
+.pro-ask { margin: 16px 0; }
+.pro-ask .check { margin-bottom: 4px; }
+.pro-ask #pro-box { margin-top: 12px; }
+.control textarea { width: 100%; border: 1px solid var(--line-strong); border-radius: 8px; padding: 10px; font: inherit; resize: vertical; background: #fff; color: var(--ink); }

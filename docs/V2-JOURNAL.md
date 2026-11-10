@@ -22,7 +22,9 @@ Branche : `v2`. Point de retour de la V1 : tag `v1-baseline`. Rien n'a été pub
 | Qui voit quoi ? | `core/access.js` : `visitor` (démonstration), `student` (parcours du compte), `open` (aucune connexion configurée : tout reste local, comme en V1). |
 | Où adapter un parcours ? | `core/curriculum.js` : cours, compétences d'entrée (`entry`). Puis `npm run build` et réexécution du fichier de seed : le serveur reçoit la même liste. |
 | Quand le parcours est-il demandé ? | Seulement si le serveur confirme son absence. Coupure, panne ou profil en cours de chargement : jamais. |
-| Écriture du parcours | `choose_initial_track` (une fois), `change_track` (entrée vérifiée). Écriture directe refusée. |
+| Écriture du parcours | `choose_initial_track` (une fois, Préparatoire ou L1), `change_track` (entrée vérifiée). Écriture directe refusée. |
+| Monde professionnel | Inscription : demande (`request_pro`), examinée dans Administration > Accès professionnels (`admin_decide_pro`). Approuvé : tous les niveaux librement. Étudiant : après toutes les évaluations du plus haut niveau occupé. Anciens inscrits directs : droits conservés, statut « à vérifier ». |
+| Corrigés et mémorisation | Corrigé détaillé d'une évaluation finale après réussite seulement ; jamais pour un positionnement. Nouvelle tentative : questions inédites d'abord, autre version des questions déjà vues, choix de QCM mélangés. Échecs répétés : attente de 30 min, puis 2 h, puis 24 h. |
 | Service non activé | Le choix est conservé avec la progression du compte, puis transmis au profil dès l'activation, sans redemander. |
 | Catalogue | Téléchargé après la connexion, seulement pour le parcours (`core/access.js`). Démonstration : `modules/decouverte/`, `pages/public.js`. |
 
@@ -59,7 +61,8 @@ Les pages de cours restent librement accessibles : les prérequis ferment l'éva
 - Contenus filtrés selon le parcours ; évaluations et changements contrôlés par le serveur.
 - Sessions conservées lors des coupures et des pannes du service.
 - Six espaces, cours, statuts, seuils configurables.
-- Évaluations : QCM, numérique, texte, dépannage par QCM, variantes de paramètres, chronomètre serveur, tentatives limitées, délai, reprise, correction détaillée, remédiation, positionnement.
+- Évaluations : QCM, numérique, texte, dépannage par QCM, variantes de paramètres, chronomètre serveur, tentatives limitées, délai croissant, reprise, corrigé après réussite, remédiation, positionnement.
+- Accès : premier parcours Préparatoire ou L1, demandes professionnelles approuvées par l'administration.
 - 40 modules dans les quatre domaines : leçon, laboratoire, exercices, évaluation serveur (`docs/CATALOGUE.md`).
 - Assistant : présenté publiquement, interface et contexte de leçon ou de laboratoire prêts, indisponibilité affichée tant qu'aucun fournisseur n'est branché.
 - Mon espace, attestation interne, administration (comptes, évaluations, supervision, seuils, IA, incidents, audit).
@@ -75,7 +78,11 @@ Les pages de cours restent librement accessibles : les prérequis ferment l'éva
 ### Nécessite une configuration externe (décision du fondateur)
 Dans cet ordre, sur le projet Supabase existant :
 1. Faire une sauvegarde de la base.
-2. SQL Editor, dans cet ordre : `supabase/migrations/20261108000100_v2_core.sql`, `supabase/migrations/20261108000200_v2_tracks.sql`, `supabase/migrations/20261110000100_v2_pro_access.sql`, puis `supabase/seed/assessments.generated.sql`. Exécuter chaque fichier une seule fois et s'arrêter à la première erreur. Une migration rejouée seule rétablit d'anciennes règles d'accès : en cas de reprise, relancer les quatre fichiers dans cet ordre.
+2. SQL Editor, chaque fichier une seule fois, en s'arrêtant à la première erreur :
+   - Projet déjà équipé des migrations 1 à 3 et des évaluations (cas actuel) : `supabase/migrations/20261110000200_v2_access_hardening.sql` uniquement. Il reprend toutes les corrections de sécurité antérieures.
+   - Nouveau projet : `20261108000100_v2_core.sql`, `20261108000200_v2_tracks.sql`, `20261110000100_v2_pro_access.sql`, `supabase/seed/assessments.generated.sql`, puis `20261110000200_v2_access_hardening.sql`.
+   - Ne jamais rejouer seule une migration 1 à 3 : elle rétablirait d'anciennes règles. En cas de reprise, relancer ensuite `20261110000200_v2_access_hardening.sql`.
+   - Annulation de la sécurisation : `supabase/rollback/20261110000200_v2_access_hardening.down.sql` (aucune donnée supprimée).
 3. Se désigner administrateur :
    `update public.profiles set role = 'admin' where id = (select id from auth.users where email = 'VOTRE_EMAIL');`
 4. Assistant IA, offre gratuite Gemini uniquement : voir `supabase/functions/ai-tutor/gemini.ts`. `supabase functions deploy ai-tutor`, puis `supabase secrets set GEMINI_API_KEY=… ALLOWED_ORIGINS=https://dainty-biscuit-3fc767.netlify.app,https://localhost,capacitor://localhost`. Le projet Google ne doit avoir aucune facturation.

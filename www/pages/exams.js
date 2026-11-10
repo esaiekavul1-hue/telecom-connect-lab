@@ -50,7 +50,8 @@
       return '<li><a href="#/resultat/' + t.id + '">' + esc(U.formatWhen(t.submitted_at || t.started_at)) + '</a> : ' + (t.percent != null ? Number(t.percent) + ' %' : '—') + ' ' + (t.proctor_status === 'pending' ? '<span class="pill">En attente de supervision</span>' : t.passed ? '<span class="pill pill--ok">Réussi</span>' : '<span class="pill pill--ko">Non réussi</span>') + '</li>';
     }).join('');
     main.innerHTML = '<div class="container page page--narrow">' + P.crumbs([{ label: 'Évaluations', href: '#/evaluations' }, { label: a.title }]) + P.head(a.title, esc(a.description)) +
-      '<section class="box"><h2>Déroulement</h2><ul><li>' + a.question_count + ' questions, durée ' + fmtDuration(a.duration_seconds) + '. Le compte à rebours est tenu par le serveur.</li><li>Réussite à partir de ' + Number(a.pass_percent) + ' %.</li><li>Tentatives : ' + (a.max_attempts ? used + ' utilisée(s) sur ' + a.max_attempts : 'non limitées') + (a.cooldown_minutes ? ', délai de ' + a.cooldown_minutes + ' min entre deux tentatives' : '') + '.</li>' +
+      '<section class="box"><h2>Déroulement</h2><ul><li>' + a.question_count + ' questions, durée ' + fmtDuration(a.duration_seconds) + '. Le compte à rebours est tenu par le serveur.</li><li>Réussite à partir de ' + Number(a.pass_percent) + ' %.</li><li>Tentatives : ' + (a.max_attempts ? used + ' utilisée(s) sur ' + a.max_attempts : 'non limitées') + (a.cooldown_minutes ? ', délai de ' + a.cooldown_minutes + ' min entre deux tentatives' + (a.kind === 'course_final' ? ', porté à 2 h puis 24 h après des échecs répétés' : '') : '') + '.</li>' +
+      '<li>' + (a.kind === 'placement' ? 'Aucun corrigé n’est communiqué pour un test de positionnement.' : 'Le corrigé détaillé est communiqué après la réussite.') + '</li>' +
       '<li>Vos réponses sont enregistrées au fur et à mesure : une coupure n’efface rien tant que le temps n’est pas écoulé.</li><li>L’assistant IA est désactivé pendant l’évaluation.</li>' +
       (a.requires_proctor ? '<li><strong>Supervision humaine</strong> : une réussite doit être approuvée avant d’être validée.</li>' : '') + '</ul>' +
       '<p class="muted">Une évaluation à distance ne peut pas exclure toute forme de triche. Elle mesure votre travail honnête.</p>' +
@@ -168,7 +169,7 @@
         : rejected ? ['error', 'x', 'Non approuvée', 'La supervision n’a pas approuvé cette tentative.']
         : r.passed ? ['ok', 'check', 'Évaluation réussie', 'Votre compétence est validée sur votre compte.']
         : r.status === 'expired' ? ['error', 'clock', 'Temps écoulé', 'Seules les réponses enregistrées à temps ont été corrigées.']
-        : ['error', 'info', 'Évaluation non réussie', 'Consultez la correction, retravaillez les notions indiquées, puis réessayez.'];
+        : ['error', 'info', 'Évaluation non réussie', 'Retravaillez les notions indiquées, puis réessayez.'];
       var failed = {}; r.items.forEach(function (i) { if (!i.correct) failed[i.skill] = 1; });
       var skills = Object.keys(failed);
       var remediation = !r.passed && skills.length ? '<section class="box"><h2>Pour progresser</h2><p>Notions à retravailler : ' + skills.map(esc).join(', ') + '.</p>' + (r.competency ? '<p><a class="btn btn--primary btn--sm" href="#/competence/' + esc(r.competency) + '">Revoir le module</a> <a class="btn btn--ghost btn--sm" href="#/assistant/' + esc(r.competency) + '">' + I('sparkle') + 'Demander à l’assistant</a></p>' : '') + '</section>' : '';
@@ -177,9 +178,14 @@
         var expected = !i.answer ? '' : i.kind === 'qcm' ? (i.options.filter(function (o) { return o.id === i.answer.id; })[0] || {}).label : i.kind === 'text' ? i.answer.accepted[0] : TCL.signalMath.formatNumber(i.answer.value, 4) + (i.unit ? ' ' + i.unit : '');
         return '<li class="correction' + (i.correct ? ' is-ok' : ' is-ko') + '"><p class="kicker">Question ' + i.position + ' · ' + esc(i.skill) + ' <span class="pill ' + (i.correct ? 'pill--ok' : 'pill--ko') + '">' + (i.correct ? 'Juste' : 'Faux') + '</span></p><div>' + i.prompt + '</div><p><strong>Votre réponse :</strong> ' + esc(answered) + '</p>' + (i.correct ? '' : '<p><strong>Réponse attendue :</strong> ' + esc(expected) + '</p>') + '<div class="muted">' + (i.explanation || '') + '</div></li>';
       }).join('') : '';
+      // Sans corrigé (échec, positionnement) : juste ou faux par question et notion, rien d'autre.
+      var brief = !items && r.items.length ? '<ol class="corrections">' + r.items.map(function (i) { return '<li class="correction' + (i.correct ? ' is-ok' : ' is-ko') + '"><p class="kicker">Question ' + i.position + ' · ' + esc(i.skill) + ' <span class="pill ' + (i.correct ? 'pill--ok' : 'pill--ko') + '">' + (i.correct ? 'Juste' : 'Faux') + '</span></p></li>'; }).join('') + '</ol>' : '';
+      var why = r.kind === 'placement' ? 'Les tests de positionnement ne communiquent pas de corrigé.'
+        : r.correction_policy !== 'after_pass' ? 'La correction détaillée n’est pas communiquée pour cette évaluation.'
+        : r.passed ? 'Le corrigé détaillé sera disponible après l’approbation de votre résultat.' : 'Le corrigé détaillé sera disponible après la réussite de cette évaluation.';
       main.innerHTML = '<div class="container page page--narrow">' + P.crumbs([{ label: 'Évaluations', href: '#/evaluations' }, { label: 'Résultat' }]) +
         '<header class="result result--' + head[0] + '">' + I(head[1]) + '<div><h1 tabindex="-1">' + esc(head[2]) + '</h1><p>' + esc(r.title) + ' : <strong>' + Number(r.percent) + ' %</strong> (seuil ' + Number(r.pass_percent) + ' %).</p><p>' + esc(head[3]) + '</p></div></header>' +
-        remediation + (items ? '<section><h2 class="h-sub">Correction détaillée</h2><ol class="corrections">' + items + '</ol></section>' : '<p class="muted">La correction détaillée n’est pas communiquée pour cette évaluation.</p>') +
+        remediation + (items ? '<section><h2 class="h-sub">Correction détaillée</h2><ol class="corrections">' + items + '</ol></section>' : '<section><h2 class="h-sub">Vos réponses</h2><p class="muted" id="no-correction">' + esc(why) + '</p>' + brief + '</section>') +
         '<p><a class="btn btn--ghost" href="#/evaluations">Retour aux évaluations</a></p></div>';
     }).catch(function (e) {
       if (gone) return;

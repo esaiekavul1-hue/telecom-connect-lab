@@ -125,4 +125,4 @@ feat: socle du catalogue et domaine électronique
 1. Valider ou modifier la répartition des modules et les compétences d'entrée, dans `core/curriculum.js`.
 2. Dire si le premier choix de parcours doit rester déclaratif ou exiger un test de positionnement.
 3. Confirmer le retrait des cours hors des quatre domaines.
-4. Autoriser, le moment venu, l'activation : sauvegarde, migrations 1, 2 et 3, `supabase/seed/assessments.generated.sql`, désignation de l'administrateur, publication et reconstruction des applications.
+4. Autoriser, le moment venu, l'activation : sauvegarde, migration de sécurisation `20261110000200_v2_access_hardening.sql` (les migrations 1 à 3 et les évaluations étant déjà installées), désignation de l'administrateur, publication et reconstruction des applications.

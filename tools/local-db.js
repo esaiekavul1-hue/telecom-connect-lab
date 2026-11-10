@@ -15,7 +15,10 @@ var STUB = [
   "create table auth.users (id uuid primary key default gen_random_uuid(), email text unique, raw_user_meta_data jsonb default '{}', created_at timestamptz default now());",
   "create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claims', true)::json ->> 'sub', '')::uuid $$;",
   "grant usage on schema public to anon, authenticated, service_role;",
-  "alter default privileges in schema public grant all on tables to anon, authenticated, service_role;"
+  // Droits par défaut d'un projet Supabase : chaque migration doit retirer ce qu'elle n'ouvre pas.
+  "alter default privileges in schema public grant all on tables to anon, authenticated, service_role;",
+  "alter default privileges in schema public grant all on functions to anon, authenticated, service_role;",
+  "alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;"
 ].join('\n');
 
 async function create(options) {
@@ -28,6 +31,8 @@ async function create(options) {
   await db.exec(fs.readFileSync(path.join(ROOT, 'supabase/migrations/20261108000200_v2_tracks.sql'), 'utf8'));
   await db.exec(fs.readFileSync(path.join(ROOT, 'supabase/migrations/20261110000100_v2_pro_access.sql'), 'utf8'));
   await db.exec(require('./generate-assessments.js').sql(require('./generate-assessments.js').assessments()));
+  // Ordre réel du projet : la sécurisation s'applique sur une base déjà remplie.
+  await db.exec(fs.readFileSync(path.join(ROOT, 'supabase/migrations/20261110000200_v2_access_hardening.sql'), 'utf8'));
 
   /** Exécute une requête avec l'identité d'un utilisateur, comme le ferait l'API. */
   async function as(userId, role, fn) {

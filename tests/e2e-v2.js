@@ -41,12 +41,20 @@ async function login(p, email, name) {
   await p.waitForFunction(function () { return /Déconnexion/.test(document.querySelector('#nav-auth').textContent); }, null, { timeout: 8000 });
   await p.waitForTimeout(700);
 }
+// À l'inscription : Préparatoire ou L1 (avec demande professionnelle pour « pro »).
+// Un niveau supérieur est ensuite placé directement en base, pour les scénarios qui en ont besoin.
 async function chooseTrack(p, space, spec) {
+  var start = space === 'preparatoire' ? 'preparatoire' : 'l1';
   await p.waitForSelector('#track-form', { timeout: 8000 });
-  await p.check('input[name=track][value=' + space + ']');
-  if (spec) await p.selectOption('#spec', spec);
+  await p.check('input[name=track][value=' + start + ']');
+  if (space === 'pro') { await p.check('#pro-ask'); if (spec) await p.selectOption('#spec', spec); }
   await p.click('#track-ok');
   await waitHash(p, '#/mon-espace');
+  if (space !== start && space !== 'pro') {
+    var id = await p.evaluate(function () { return TCL.auth.state().user.id; });
+    await S.db.db.query('update public.profiles set space = $1 where id = $2', [space, id]);
+    await p.reload(); await waitHash(p, '#/mon-espace'); await p.waitForTimeout(500);
+  }
 }
 
 async function correct(att, position) {
@@ -132,15 +140,17 @@ function rpcResult(p, name, args) { return p.evaluate(function (a) { return TCL.
   var email = 'etudiant@exemple.org';
   await login(p, email, 'Etudiant Test');
   await waitHash(p, '#/bienvenue');
-  ok('après inscription : six parcours proposés', (await p.$$('input[name=track]')).length === 6);
+  ok('après inscription : Préparatoire ou Licence 1 proposés', (await p.$$eval('input[name=track]', function (a) { return a.map(function (x) { return x.value; }).join(); })) === 'preparatoire,l1');
   ok('rubriques masquées tant que le parcours n’est pas choisi', (await p.$$('#nav-list .nav__link:not(.nav__link--auth)')).length === 0);
   await shot(p, '05-choix-parcours');
   await p.goto(S.site + '#/lecons'); await waitHash(p, '#/bienvenue');
   ok('impossible de contourner le choix', true);
-  await p.check('input[name=track][value=pro]');
-  ok('Monde professionnel : spécialisations proposées', await p.isVisible('#spec') && (await p.$$('#spec option')).length === 8);
+  await p.check('#pro-ask');
+  ok('demande professionnelle : spécialisations proposées', await p.isVisible('#spec') && (await p.$$('#spec option')).length === 8 && await p.isVisible('#pro-msg'));
+  await p.uncheck('#pro-ask');
+  ok('demande professionnelle facultative, masquée sinon', !(await p.isVisible('#spec')));
+  ok('premier parcours au-delà de L1 refusé par le serveur', /premier parcours est Préparatoire ou Licence 1/.test(await rpcResult(p, 'choose_initial_track', { p_space: 'master', p_specialization: null })) && /premier parcours/.test(await rpcResult(p, 'choose_initial_track', { p_space: 'pro', p_specialization: null })));
   await p.check('input[name=track][value=l1]');
-  ok('spécialisations masquées pour les autres parcours', !(await p.isVisible('#spec')));
   await p.click('#track-ok');
   await waitHash(p, '#/mon-espace');
   ok('parcours enregistré dans le profil serveur', (await profileOf(email)).space === 'l1');
@@ -217,13 +227,14 @@ function rpcResult(p, name, args) { return p.evaluate(function (a) { return TCL.
   await p.click('#start'); await p.waitForSelector('#eform');
   ok('reprise après rechargement : même tentative, réponses conservées', (await currentAttempt(email)) === att && (await p.$$('.qdot.is-ok')).length === 5);
   await finishExam(p);
-  ok('échec : résultat, remédiation, correction', /40 %/.test(await text(p, '.result')) && /Pour progresser/.test(await text(p, 'main')) && (await p.$$('.correction')).length === 5);
+  ok('échec : résultat, remédiation, juste ou faux par question', /40 %/.test(await text(p, '.result')) && /Pour progresser/.test(await text(p, 'main')) && (await p.$$('.correction.is-ok')).length === 2 && (await p.$$('.correction')).length === 5);
+  ok('échec : aucun corrigé ni énoncé communiqué', !/Réponse attendue|Votre réponse/.test(await text(p, 'main')) && /disponible après la réussite/.test(await text(p, '#no-correction')), await text(p, 'main'));
   await S.db.db.query("update public.assessments set cooldown_minutes = 0 where id in ('final-circuits','final-signaux')");
   await p.evaluate(function () { return TCL.official.refresh(); });
   await go(p, 'evaluations/final-circuits'); await p.click('#start'); await p.waitForSelector('#eform');
   await answerAll(p, email, 5, 5);
   await finishExam(p);
-  ok('réussite : compétence validée par le serveur', /100 %/.test(await text(p, '.result')));
+  ok('réussite : compétence validée par le serveur, corrigé détaillé communiqué', /100 %/.test(await text(p, '.result')) && /Correction détaillée/.test(await text(p, 'main')) && /Votre réponse/.test(await text(p, 'main')));
   await go(p, 'attestation/circuits');
   ok('attestation clairement interne', /Attestation interne/.test(await text(p, 'main')) && /ni un diplôme/.test(await text(p, 'main')));
 
@@ -286,7 +297,7 @@ function rpcResult(p, name, args) { return p.evaluate(function (a) { return TCL.
   await S.db.db.query("update public.progress set data = $1, updated_at = now() where user_id = $2", [{ version: 1, updatedAt: '2026-11-01T00:00:00.000Z', lessons: { ip: { chapters: { c1: '2026-10-01T00:00:00.000Z' }, last: 'c1' } }, lab: {}, exercises: {}, activity: [], prefs: {} }, uid]);
   await v1.reload(); await waitHash(v1, '#/bienvenue');
   await v1.waitForSelector('input[name=track]', { timeout: 8000 });
-  ok('compte V1 sans parcours : sélection demandée, sans réinscription', (await v1.$$('input[name=track]')).length === 6);
+  ok('compte V1 sans parcours : sélection demandée, sans réinscription', (await v1.$$('input[name=track]')).length === 2);
   await chooseTrack(v1, 'l1');
   await go(v1, 'progression');
   ok('compte V1 : progression préservée', /Chapitres lus ?1 \/ \d+/.test(await text(v1, '.kpis')), await text(v1, '.kpis'));
@@ -342,7 +353,7 @@ function rpcResult(p, name, args) { return p.evaluate(function (a) { return TCL.
   ok('administration accessible avant le choix du parcours', (await a.$$('#adm .stat')).length === 8, await text(a, '#adm'));
   await a.click('[data-tab=users]'); await a.waitForTimeout(400);
   ok('parcours des comptes visible', /Licence 2/.test(await text(a, '#adm')));
-  for (var t of ['exams', 'reviews', 'content', 'ai', 'errors']) { await a.click('[data-tab=' + t + ']'); await a.waitForTimeout(350); }
+  for (var t of ['pro', 'exams', 'reviews', 'content', 'ai', 'errors']) { await a.click('[data-tab=' + t + ']'); await a.waitForTimeout(350); }
   ok('tous les onglets s’ouvrent sans erreur', !/callout--error/.test(await a.innerHTML('#adm')));
   await go(q, 'admin');
   ok('un étudiant est refusé', /Accès réservé/.test(await text(q, 'main')));
@@ -362,9 +373,18 @@ function rpcResult(p, name, args) { return p.evaluate(function (a) { return TCL.
   if (ww > 1) over.push('bienvenue:' + ww);
   await shot(mp, '11-mobile-choix');
   await chooseTrack(mp, 'pro', 'pro-fibre');
-  ok('spécialisation enregistrée', (await profileOf('mobile@exemple.org')).specialization === 'pro-fibre');
+  ok('demande professionnelle : compte en L1, aucun droit avant l’approbation', (await profileOf('mobile@exemple.org')).space === 'l1' && (await S.db.db.query("select pro_status from public.profiles p join auth.users u on u.id = p.id where u.email = 'mobile@exemple.org'")).rows[0].pro_status === 'pending');
   await go(mp, 'changer-parcours');
-  ok('inscrit en professionnel : tous les niveaux proposés', (await mp.$$('[data-move=preparatoire],[data-move=l1],[data-move=l2],[data-move=l3],[data-move=master],[data-move=pro]')).length === 6);
+  ok('demande professionnelle affichée en attente, niveaux supérieurs fermés', /en attente de validation/.test(await text(mp, '#pro-pending')) && (await mp.$('[data-move=master]')) === null);
+  await go(a, 'admin'); await a.click('[data-tab=pro]'); await a.waitForSelector('#adm tr[data-id]', { timeout: 5000 });
+  ok('administration : demande listée avec sa spécialisation', /mobile@exemple\.org/.test(await text(a, '#adm')) && /fibre/i.test(await text(a, '#adm')), await text(a, '#adm'));
+  a.once('dialog', function (x) { x.accept(); });
+  await a.click('#adm tr:has-text("mobile@exemple.org") [data-pro="1"]');
+  await a.waitForFunction(function () { return !/mobile@exemple/.test(document.querySelector('#adm').textContent); }, null, { timeout: 5000 });
+  await mp.reload(); await mp.waitForTimeout(800);
+  ok('approbation : Monde professionnel et spécialisation demandée', (await profileOf('mobile@exemple.org')).specialization === 'pro-fibre' && (await profileOf('mobile@exemple.org')).space === 'pro');
+  await go(mp, 'changer-parcours');
+  ok('professionnel approuvé : tous les niveaux proposés', (await mp.$$('[data-move=preparatoire],[data-move=l1],[data-move=l2],[data-move=l3],[data-move=master],[data-move=pro]')).length === 6);
   await go(mp, 'mon-espace');
   await go(mp, 'lecons');
   var pm = (await mp.$$eval('.card[data-module]', function (x) { return x.map(function (y) { return y.getAttribute('data-module'); }); })).sort().join(',');
