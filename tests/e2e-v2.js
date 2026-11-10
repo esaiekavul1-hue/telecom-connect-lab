@@ -252,6 +252,7 @@ function rpcResult(p, name, args) { return p.evaluate(function (a) { return TCL.
   console.log('\nÉvolution du parcours');
   await go(p, 'changer-parcours');
   ok('changement : prérequis manquants et test de positionnement proposés', /À valider d’abord : Comprendre les signaux/.test(await text(p, '.courses')) && (await p.$('[data-move=l2]')) === null && /Positionnement/.test(await text(p, '.courses')), await text(p, '.courses'));
+  ok('étudiant L1 : Monde professionnel verrouillé dans le menu', (await p.$('[data-move=pro]')) === null && (await p.$('#spec-change')) === null);
   await shot(p, '09-changer-parcours');
   await go(p, 'evaluations/final-signaux'); await p.click('#start'); await p.waitForSelector('#eform');
   await answerAll(p, email, 5, 5);
@@ -362,6 +363,9 @@ function rpcResult(p, name, args) { return p.evaluate(function (a) { return TCL.
   await shot(mp, '11-mobile-choix');
   await chooseTrack(mp, 'pro', 'pro-fibre');
   ok('spécialisation enregistrée', (await profileOf('mobile@exemple.org')).specialization === 'pro-fibre');
+  await go(mp, 'changer-parcours');
+  ok('inscrit en professionnel : tous les niveaux proposés', (await mp.$$('[data-move=preparatoire],[data-move=l1],[data-move=l2],[data-move=l3],[data-move=master],[data-move=pro]')).length === 6);
+  await go(mp, 'mon-espace');
   await go(mp, 'lecons');
   var pm = (await mp.$$eval('.card[data-module]', function (x) { return x.map(function (y) { return y.getAttribute('data-module'); }); })).sort().join(',');
   ok('spécialisation : uniquement ses modules et leurs bases', pm === 'chaine,fibre,ondes-em,qualite,signaux', pm);
@@ -390,7 +394,7 @@ function rpcResult(p, name, args) { return p.evaluate(function (a) { return TCL.
   var c3 = await newPage(browser), ai = c3.page;
   await login(ai, 'ia@exemple.org', 'IA');
   await chooseTrack(ai, 'l2');
-  await go(ai, 'assistant/fibre?chapitre=c1'); await ai.waitForTimeout(400);
+  await go(ai, 'assistant/fibre?chapitre=c1'); await ai.waitForSelector('#ai-input', { timeout: 15000 });
   ok('assistant : envoi impossible sans confirmation des conditions', await ai.$eval('#ai-input', function (e) { return e.disabled; }));
   await ai.check('#ai-consent'); await ai.waitForTimeout(100);
   await ai.click('[data-mode=hint]');

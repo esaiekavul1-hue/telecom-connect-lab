@@ -146,7 +146,12 @@ test('changement : monter exige l’entrée ; descendre, non', function () {
   assert.strictEqual(r.allowed, false); assert.deepStrictEqual(r.missing, ['signaux']); assert.ok(r.placements.some(function (p) { return p.id === 'placement-bases'; }));
   assert.strictEqual(CUR.checkMove({ space: 'l1' }, { space: 'l2' }, { circuits: {}, signaux: {} }).allowed, true);
   assert.strictEqual(CUR.checkMove({ space: 'l3' }, { space: 'l1' }, {}).allowed, true);
-  assert.strictEqual(CUR.checkMove({ space: 'l1' }, { space: 'pro' }, {}).allowed, true);
+  var l1 = CUR.trackModules('l1', null), all = {}; l1.core.concat(l1.prerequisites).forEach(function (c) { all[c] = {}; });
+  var locked = CUR.checkMove({ space: 'l1' }, { space: 'pro' }, { circuits: {} });
+  assert.strictEqual(locked.allowed, false); assert.strictEqual(locked.missing.length, Object.keys(all).length - 1);
+  assert.strictEqual(CUR.checkMove({ space: 'master' }, { space: 'pro' }, {}).allowed, false);
+  assert.strictEqual(CUR.checkMove({ space: 'l1' }, { space: 'pro' }, all).allowed, true);
+  ['preparatoire', 'l1', 'l2', 'l3', 'master'].forEach(function (x) { assert.strictEqual(CUR.checkMove({ space: 'pro' }, { space: x }, {}, true).allowed, true, x); });
   assert.strictEqual(CUR.checkMove({ space: 'pro' }, { space: 'l1' }, {}).allowed, false);
   assert.strictEqual(CUR.checkMove({ space: 'l1' }, { space: 'l1' }, {}).same, true);
 });

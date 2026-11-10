@@ -192,14 +192,20 @@
 
   /**
    * Règle de changement, identique à public.change_track : monter de niveau exige
-   * les compétences d'entrée ; redescendre ou rejoindre le monde professionnel reste libre.
+   * les compétences d'entrée ; redescendre reste libre. Le monde professionnel exige toutes les
+   * évaluations du parcours actuel. directPro : inscrit en professionnel, accès libre.
    */
-  function checkMove(from, to, validated) {
+  function checkMove(from, to, validated, directPro) {
     var a = spaceById(from.space), b = spaceById(to.space);
     if (!b) return { allowed: false, missing: [], placements: [], upward: false };
     if (from.space === to.space && (from.specialization || null) === (to.specialization || null)) return { allowed: false, same: true, missing: [], placements: [], upward: false };
-    var upward = b.rank != null && (!a || a.rank == null || b.rank > a.rank);
-    var missing = upward ? b.entry.filter(function (c) { return !validated[c]; }) : [];
+    if (directPro) return { allowed: true, upward: false, missing: [], placements: [] };
+    var toPro = to.space === 'pro' && from.space !== 'pro';
+    var upward = toPro || (b.rank != null && (!a || a.rank == null || b.rank > a.rank));
+    var required = [];
+    if (toPro) { var m = trackModules(from.space, from.specialization); required = m.core.concat(m.prerequisites); }
+    else if (upward) required = b.entry;
+    var missing = required.filter(function (c) { return !validated[c]; });
     var help = placements.filter(function (p) { return p.grants.some(function (g) { return missing.indexOf(g) >= 0; }); });
     return { allowed: missing.length === 0, upward: upward, missing: missing, placements: help };
   }

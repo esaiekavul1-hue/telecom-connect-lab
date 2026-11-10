@@ -351,10 +351,20 @@ async function rejects(p, re) {
     assert.strictEqual(at.rows[0].n, 1);
     assert.deepStrictEqual((await history(t1)).map(function (h) { return h.to_space; }), ['l1', 'l2']);
   });
-  await test('redescendre et rejoindre le monde professionnel restent libres ; revenir exige toujours l’entrée', async function () {
+  await test('étudiant : monde professionnel fermé tant que son parcours n’est pas validé ; redescendre reste libre', async function () {
     assert.strictEqual((await L.rpc(t1, 'change_track', { p_space: 'preparatoire' })).space, 'preparatoire');
+    await rejects(L.rpc(t1, 'change_track', { p_space: 'pro', p_specialization: 'pro-reseaux' }), /à valider avant ce parcours : binaire, iot-intro, ordinateur/);
+    assert.strictEqual((await profile(t1)).space, 'preparatoire');
+    await validate(t1, ['binaire', 'ordinateur', 'iot-intro']);
     assert.strictEqual((await L.rpc(t1, 'change_track', { p_space: 'pro', p_specialization: 'pro-reseaux' })).specialization, 'pro-reseaux');
     await rejects(L.rpc(t1, 'change_track', { p_space: 'l3' }), /à valider avant ce parcours/);
+  });
+  await test('inscrit en professionnel : tous les niveaux librement, sans validation', async function () {
+    var dp = await L.createUser('direct-pro@exemple.org');
+    await L.rpc(dp, 'choose_initial_track', { p_space: 'pro' });
+    for (var sp2 of ['master', 'l3', 'l1', 'preparatoire', 'pro', 'l2']) assert.strictEqual((await L.rpc(dp, 'change_track', { p_space: sp2 })).space, sp2);
+    assert.strictEqual((await L.db.query('select count(*)::int n from public.competency_validations where user_id = $1', [dp])).rows[0].n, 0);
+    assert.strictEqual((await L.rpc(dp, 'change_track', { p_space: 'pro' })).space, 'pro');
   });
   await test('sans parcours initial, le changement est refusé', async function () {
     var n = await L.createUser('n@exemple.org');
@@ -384,6 +394,9 @@ async function rejects(p, re) {
     assert.ok(v.rows[0].n >= 4);
   });
   await test('l’annulation retire la V2 et conserve comptes et progressions', async function () {
+    await L.db.exec(fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261110000100_v2_pro_access.sql'), 'utf8'));
+    await L.db.exec(fs.readFileSync(path.join(__dirname, '../supabase/rollback/20261110000100_v2_pro_access.down.sql'), 'utf8'));
+    assert.strictEqual((await L.db.query("select to_regprocedure('private.is_direct_pro(uuid)') as f")).rows[0].f, null);
     var migration2 = fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261108000200_v2_tracks.sql'), 'utf8');
     await L.db.exec(migration2);
     var spaceKept = (await L.db.query('select count(*)::int n from public.profiles where space is not null')).rows[0].n;
