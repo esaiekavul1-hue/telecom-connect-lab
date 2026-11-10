@@ -509,6 +509,13 @@ language sql security definer set search_path = '' as $$
    where user_id = p_user and day = (now() at time zone 'utc')::date;
 $$;
 
+-- Rend une demande restée sans réponse (limite ou panne du fournisseur).
+create or replace function public.ai_release_request(p_user uuid) returns void
+language sql security definer set search_path = '' as $$
+  update public.ai_usage_daily set requests = greatest(requests - 1, 0)
+   where user_id = p_user and day = (now() at time zone 'utc')::date;
+$$;
+
 -- ---------------------------------------------------------------------
 -- Administration
 -- ---------------------------------------------------------------------
@@ -674,7 +681,7 @@ begin
     select p.oid::regprocedure as sig from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public' and p.proname in (
       'is_admin','start_attempt','save_answer','attempt_result','submit_attempt','log_client_error',
-      'ai_reserve_request','ai_record_usage','admin_stats','admin_list_users','admin_set_role','admin_set_setting',
+      'ai_reserve_request','ai_record_usage','ai_release_request','admin_stats','admin_list_users','admin_set_role','admin_set_setting',
       'admin_pending_reviews','admin_review_attempt','admin_update_assessment','admin_list_questions',
       'admin_set_question_active','admin_recent_errors','admin_set_validation')
   loop
@@ -702,3 +709,4 @@ grant execute on function public.admin_set_validation(uuid, text, boolean) to au
 -- Les fonctions IA ne sont accessibles qu'à la clé de service de la fonction serveur.
 grant execute on function public.ai_reserve_request(uuid) to service_role;
 grant execute on function public.ai_record_usage(uuid, bigint, bigint, numeric) to service_role;
+grant execute on function public.ai_release_request(uuid) to service_role;

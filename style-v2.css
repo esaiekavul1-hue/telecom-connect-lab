@@ -266,3 +266,7 @@
 .ask-ai a { display: inline-flex; gap: 6px; align-items: center; }
 .scope__trace--thin { fill: none; stroke: var(--cyan-400); stroke-width: 1; opacity: .55; }
 .lab__controls .controls:empty { display: none; }
+
+.ai-consent { display: flex; gap: 8px; align-items: flex-start; margin-top: 10px; font-size: 14px; color: var(--ink-2); }
+.ai-consent[hidden] { display: none; }
+.ai-consent input { margin-top: 3px; flex: 0 0 auto; }

@@ -390,11 +390,14 @@ function rpcResult(p, name, args) { return p.evaluate(function (a) { return TCL.
   var c3 = await newPage(browser), ai = c3.page;
   await login(ai, 'ia@exemple.org', 'IA');
   await chooseTrack(ai, 'l2');
-  await go(ai, 'assistant/fibre'); await ai.waitForTimeout(400);
+  await go(ai, 'assistant/fibre?chapitre=c1'); await ai.waitForTimeout(400);
+  ok('assistant : envoi impossible sans confirmation des conditions', await ai.$eval('#ai-input', function (e) { return e.disabled; }));
+  await ai.check('#ai-consent'); await ai.waitForTimeout(100);
   await ai.click('[data-mode=hint]');
   await ai.fill('#ai-input', 'Comment calculer l’angle critique ?');
   await ai.click('#ai-send'); await ai.waitForSelector('.bubble--bot:not(:has(.spinner))');
   ok('la question atteint la passerelle, le niveau de l’étudiant est transmis', /RÉPONSE DE TEST/.test(await text(ai, '.bubble--bot')) && /Licence 2/.test(calls[0].sys) && /Fibre optique/.test(calls[0].sys), calls[0] && calls[0].sys);
+  ok('le contenu du chapitre et le parcours sont transmis', /Extrait du cours/.test(calls[0].sys) && /Parcours : Licence 2/.test(calls[0].sys), calls[0] && calls[0].sys);
   await go(ai, 'evaluations/final-signaux'); await ai.click('#start'); await ai.waitForSelector('#eform');
   var st = await ai.evaluate(async function () { var r = await TCL.api.tutor({ messages: [{ role: 'user', content: 'aide' }] }); return r.res.status; });
   ok('pendant l’examen, le serveur bloque l’assistant', st === 403 && calls.length === 1, st);

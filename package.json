@@ -12,6 +12,7 @@
     "test:e2e:v2": "node tests/e2e-v2.js",
     "test:e2e:catalogue": "node tests/e2e-catalogue.js",
     "dev": "node tools/dev-server.js",
+    "ai:check": "node tools/ai-check.js",
     "generate:assessments": "node tools/generate-assessments.js",
     "build": "node tools/generate-assessments.js && node tools/build-www.js",
     "cap:sync": "npm run build && npx cap sync"

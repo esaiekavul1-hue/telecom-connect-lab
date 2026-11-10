@@ -18,6 +18,7 @@ drop function if exists public.admin_set_role(uuid, text);
 drop function if exists public.admin_list_users(text, integer, integer);
 drop function if exists public.admin_stats();
 drop function if exists public.ai_record_usage(uuid, bigint, bigint, numeric);
+drop function if exists public.ai_release_request(uuid);
 drop function if exists public.ai_reserve_request(uuid);
 drop function if exists public.log_client_error(text, text, jsonb);
 drop function if exists public.submit_attempt(uuid);

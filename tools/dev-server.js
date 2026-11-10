@@ -52,6 +52,16 @@ async function start(options) {
   fs.writeFileSync(tmp, strip(fs.readFileSync(path.join(ROOT, 'supabase/functions/ai-tutor/handler.ts'), 'utf8')));
   var handler = await import(require('url').pathToFileURL(tmp).href);
   fs.unlinkSync(tmp);
+  /* Vraie conversation en local si GEMINI_API_KEY est définie (jamais envoyée au navigateur). */
+  var realProvider = null;
+  if (process.env.GEMINI_API_KEY && !options.provider) {
+    var tmpG = path.join(require('os').tmpdir(), 'tcl-ai-gemini-' + process.pid + '.mjs');
+    fs.writeFileSync(tmpG, strip(fs.readFileSync(path.join(ROOT, 'supabase/functions/ai-tutor/gemini.ts'), 'utf8')));
+    var G = await import(require('url').pathToFileURL(tmpG).href);
+    fs.unlinkSync(tmpG);
+    realProvider = G.geminiProvider({ apiKey: process.env.GEMINI_API_KEY, model: process.env.AI_MODEL || undefined, fallback: process.env.AI_FALLBACK_MODEL || undefined });
+    console.log('  Assistant : Gemini activé (offre gratuite).');
+  }
   var known = {};
 
   async function ensureUser(user) {
@@ -104,10 +114,11 @@ async function start(options) {
     var reqH = { authorization: c.req.headers.authorization || '', origin: c.req.headers.origin || '' };
     var request = new Request('http://local' + c.u.pathname, c.req.method === 'POST' ? { method: 'POST', headers: reqH, body: c.raw } : { method: c.req.method, headers: reqH });
     var response = await handler.handle(request, {
-      provider: options.provider || null, allowedOrigins: ['*'],
+      provider: options.provider || realProvider, allowedOrigins: ['*'],
       verifyUser: function () { return Promise.resolve(c.user ? c.user.id : null); },
       reserve: function (id) { return db.rpc(null, 'ai_reserve_request', { p_user: id }, 'service_role'); },
-      record: function (id, u) { return db.rpc(null, 'ai_record_usage', { p_user: id, p_input: u.inputTokens, p_output: u.outputTokens, p_cost: u.costUsd }, 'service_role'); }
+      record: function (id, u) { return db.rpc(null, 'ai_record_usage', { p_user: id, p_input: u.inputTokens, p_output: u.outputTokens, p_cost: u.costUsd }, 'service_role'); },
+      release: function (id) { return db.rpc(null, 'ai_release_request', { p_user: id }, 'service_role'); }
     });
     var text = await response.text();
     return c.send(c.res, response.status, text ? JSON.parse(text) : null);

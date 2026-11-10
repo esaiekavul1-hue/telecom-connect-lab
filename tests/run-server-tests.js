@@ -85,6 +85,7 @@ async function rejects(p, re) {
   await test('les fonctions de quota IA sont réservées à la clé de service', async function () {
     await rejects(L.rpc(a, 'ai_reserve_request', { p_user: a }), /permission denied/);
     await rejects(L.rpc(a, 'ai_record_usage', { p_user: a, p_input: 0, p_output: 0, p_cost: 0 }), /permission denied/);
+    await rejects(L.rpc(a, 'ai_release_request', { p_user: a }), /permission denied/);
   });
   await test('un utilisateur non admin ne peut lire ni les paramètres privés ni les journaux', async function () {
     var r = await L.as(a, 'authenticated', function (tx) { return tx.query("select key from public.platform_settings where key = 'ai_monthly_budget_usd'"); });
@@ -247,6 +248,8 @@ async function rejects(p, re) {
     assert.strictEqual((await svc('ai_reserve_request', { p_user: f })).allowed, true);
     var r = await svc('ai_reserve_request', { p_user: f });
     assert.strictEqual(r.allowed, false); assert.strictEqual(r.reason, 'daily_limit');
+    await svc('ai_release_request', { p_user: f });
+    assert.strictEqual((await svc('ai_reserve_request', { p_user: f })).allowed, true, 'demande rendue après une panne');
     await L.db.query("update public.platform_settings set value = '20' where key = 'ai_daily_requests'");
   });
   await test('budget mensuel et désactivation globale', async function () {

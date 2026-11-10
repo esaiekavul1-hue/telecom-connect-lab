@@ -116,7 +116,7 @@ feat: socle du catalogue et domaine électronique
 - Profondeur : les nouvelles leçons ont 3 à 4 chapitres, contre 5 à 6 en V1. Elles couvrent l'essentiel de chaque sujet, sans remplacer un cours universitaire complet. Le Master propose un module par cours.
 - Évaluations pratiques notées par le serveur : non développées.
 - 4G : traitée par ses principes partagés avec la 5G, sans module dédié. Les paramètres LTE ne sont pas confirmés par une source lue.
-- Assistant IA : interface et contexte prêts, activation à réaliser dans une phase distincte.
+- Assistant IA : passerelle Gemini gratuite prête, à tester avec une vraie clé (`npm run ai:check`).
 - Les 10 modules V1 n'ont pas fait l'objet d'une nouvelle revue de sources.
 - Administration des contenus : présentation et seuils uniquement.
 

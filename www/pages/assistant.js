@@ -15,17 +15,24 @@
     budget: 'Le service a atteint son budget mensuel. Il sera de nouveau disponible le mois prochain.',
     disabled: 'L’assistant est momentanément désactivé par l’administration.',
     provider_error: 'Le service d’IA ne répond pas. Réessayez dans quelques instants.',
+    provider_busy: 'Le service d’IA est momentanément surchargé. Réessayez dans quelques instants.',
+    free_limit: 'La limite gratuite du service d’IA est atteinte pour le moment. Réessayez dans une minute ; si le message persiste, la limite du jour est épuisée et se renouvelle le lendemain matin. Cette demande n’est pas décomptée de votre quota.',
     refused: 'L’assistant n’a pas pu répondre à cette demande. Reformulez-la autour de votre cours.',
     invalid_messages: 'Message trop long : limitez-le à 2 000 caractères.'
   };
+
+  function plain(html) { return String(html).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(); }
 
   /** Page d'où vient l'étudiant : #/assistant/<module>?chapitre=c2 ou ?labo=1. */
   function origin(mod) {
     var q = (root.location.hash.split('?')[1] || '').split('&').map(function (x) { return x.split('='); });
     function get(k) { var f = q.filter(function (x) { return x[0] === k; })[0]; return f ? f[1] : null; }
     var ch = get('chapitre'), lesson = mod && TCL.lessons && TCL.lessons[mod];
-    if (ch && lesson) { var c = lesson.chapters.filter(function (x) { return x.id === ch; })[0]; if (c) return { label: 'Chapitre : ' + c.title, text: 'L’étudiant lit le chapitre « ' + c.title + ' ».' }; }
-    if (get('labo') && mod && TCL.labs && TCL.labs[mod]) return { label: 'Laboratoire : ' + TCL.labs[mod].title, text: 'L’étudiant travaille dans le laboratoire « ' + TCL.labs[mod].title + ' ».' };
+    if (ch && lesson) { var c = lesson.chapters.filter(function (x) { return x.id === ch; })[0]; if (c) return { label: 'Chapitre : ' + c.title, text: 'L’étudiant lit le chapitre « ' + c.title + ' ». Extrait du cours : ' + plain(c.html).slice(0, 1500) }; }
+    if (get('labo') && mod && TCL.labs && TCL.labs[mod]) {
+      var L = TCL.labs[mod], par = (TCL.store.get().lab[mod] || {}).params;
+      return { label: 'Laboratoire : ' + L.title, text: 'L’étudiant travaille dans le laboratoire « ' + L.title + ' ». ' + (L.summary || '') + ' Missions : ' + L.missions.map(function (x) { return x.title; }).join(' ; ') + '.' + (par ? ' Réglages actuels : ' + JSON.stringify(par).slice(0, 300) + '.' : '') };
+    }
     return null;
   }
 
@@ -33,6 +40,7 @@
     var ctx = O.ctx(), parts = [], t = TCL.access.track();
     if (t.state === 'set') parts.push('Parcours : ' + t.label + '.');
     if (from) parts.push(from.text);
+    if (mod && !from && TCL.lessons && TCL.lessons[mod]) parts.push('Objectifs du cours : ' + TCL.lessons[mod].objectives.join(' '));
     if (mod && ctx.content[mod]) {
       var m = TCL.mastery.moduleMastery(mod, ctx);
       parts.push('Avancement du module : ' + m.steps.map(function (s) { return s.label + ' ' + s.percent + ' %'; }).join(', ') + '.');
@@ -60,12 +68,20 @@
       mods.map(function (id) { return '<option value="' + id + '"' + (id === current ? ' selected' : '') + '>' + esc(CUR.competencies[id].title) + '</option>'; }).join('') + '</select></div>' +
       '<div class="chips" role="group" aria-label="Type d’aide">' + MODES.map(function (m) { return '<button type="button" class="chip chip--text' + (m[0] === mode ? ' is-active' : '') + '" data-mode="' + m[0] + '" aria-pressed="' + (m[0] === mode) + '">' + esc(m[1]) + '</button>'; }).join('') + '</div></div>' +
       '<div class="chat__log" id="ai-log" aria-live="polite"></div>' +
+      '<label class="ai-consent" id="ai-consent-box"><input type="checkbox" id="ai-consent"> <span>J’ai au moins 18 ans. Je ne saisirai aucune information personnelle : l’assistant utilise le service gratuit de Google, qui peut conserver les échanges, les faire relire par des personnes et s’en servir pour améliorer ses produits.</span></label>' +
       '<form class="chat__form" id="ai-form"><label for="ai-input" class="sr-only">Votre question</label><textarea id="ai-input" rows="2" maxlength="2000" placeholder="Votre question…"></textarea><button class="btn btn--primary" id="ai-send" type="submit">Envoyer</button></form>' +
       '<p class="muted note">Une IA peut se tromper : vérifiez dans la leçon ou le laboratoire. Elle n’intervient jamais dans la notation.</p></section></div>';
 
     var log = U.qs('#ai-log', main), input = U.qs('#ai-input', main), send = U.qs('#ai-send', main), status = U.qs('#ai-status', main);
 
+    var blocked = false, consent = U.qs('#ai-consent', main);
+    function accepted() { return !!(TCL.store.get().prefs || {}).aiConsent; }
+    function applyConsent() { U.qs('#ai-consent-box', main).hidden = accepted(); if (!blocked) input.disabled = send.disabled = !accepted(); }
+    consent.addEventListener('change', function () { if (!consent.checked) return; TCL.store.update(function (s) { s.prefs.aiConsent = new Date().toISOString(); }, 'ai-consent'); applyConsent(); });
+    applyConsent();
+
     function block(msg, kind) {
+      blocked = true;
       status.innerHTML = '<div class="callout callout--' + (kind || 'warn') + '">' + I('alert') + '<p>' + msg + '</p></div>';
       input.disabled = send.disabled = true;
     }
@@ -102,7 +118,7 @@
       bubble('user', text2html(q));
       var wait = bubble('bot', '<span class="spinner" aria-hidden="true"></span> Réflexion…');
       var profile = O.get().profile;
-      TCL.api.tutor({ messages: history, mode: mode, module: current ? CUR.competencies[current].title : undefined, level: profile && profile.space, context: progressContext(current, from) }).then(function (r) {
+      TCL.api.tutor({ messages: history, mode: mode, module: current ? CUR.competencies[current].title : undefined, level: TCL.access.track().space || (profile && profile.space), context: progressContext(current, from) }).then(function (r) {
         if (gone) return;
         if (r.data && r.data.text) {
           history.push({ role: 'assistant', content: r.data.text });
@@ -116,7 +132,7 @@
         } else {
           history.pop();
           var code = r.data && r.data.error;
-          if (r.res.status === 503) block('<strong>Service d’IA non connecté.</strong>');
+          if (code === 'not_configured') block('<strong>Service d’IA non connecté.</strong>');
           wait.className = 'bubble bubble--err'; wait.textContent = ERRORS[code] || 'La réponse n’a pas pu être obtenue.';
         }
       }).catch(function (err) {

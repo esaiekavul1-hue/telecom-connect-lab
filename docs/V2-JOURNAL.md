@@ -78,8 +78,8 @@ Dans cet ordre, sur le projet Supabase existant :
 2. SQL Editor, dans cet ordre : `supabase/migrations/20261108000100_v2_core.sql`, `supabase/migrations/20261108000200_v2_tracks.sql`, puis `supabase/seed/assessments.generated.sql`.
 3. Se désigner administrateur :
    `update public.profiles set role = 'admin' where id = (select id from auth.users where email = 'VOTRE_EMAIL');`
-4. Assistant IA : créer une clé chez le fournisseur, puis `supabase functions deploy ai-tutor` et `supabase secrets set ANTHROPIC_API_KEY=… ALLOWED_ORIGINS=https://dainty-biscuit-3fc767.netlify.app,https://localhost,capacitor://localhost`.
-   `AI_MODEL` choisit le modèle (défaut `claude-opus-5-5`, 4 $ / 20 $ par million de jetons ; `claude-haiku-5-5` : 0,10 $ / 0,50 $).
+4. Assistant IA, offre gratuite Gemini uniquement : voir `supabase/functions/ai-tutor/gemini.ts`. `supabase functions deploy ai-tutor`, puis `supabase secrets set GEMINI_API_KEY=… ALLOWED_ORIGINS=https://dainty-biscuit-3fc767.netlify.app,https://localhost,capacitor://localhost`. Le projet Google ne doit avoir aucune facturation.
+   Conditions Google de l'offre gratuite : 18 ans minimum, pas de données personnelles, contenus réutilisables par Google et relus par des personnes. L'interface fait confirmer ces points ; e-mails et téléphones sont masqués par la passerelle.
 5. Publier `www` sur Netlify, reconstruire l'APK.
 
 ### Nécessite une validation scientifique
