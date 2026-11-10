@@ -118,3 +118,10 @@ Deno.test("gemini : blocages, troncature, pensées ignorées, conversation", () 
   assert.equal(parseReply({ candidates: [{ content: { parts: [{ thought: true, text: "secret" }, { text: "visible" }] } }] }).text, "visible");
   assert.deepEqual(toContents([{ role: "assistant", content: "x" }]), [{ role: "model", parts: [{ text: "x" }] }]);
 });
+Deno.test("gemini : détail de l'erreur conservé, clé masquée, rien vers l'étudiant", async () => {
+  const body = JSON.stringify({ error: { status: "INVALID_ARGUMENT", message: "bad key CLE", details: [{ reason: "API_KEY_INVALID" }] } });
+  const p = geminiProvider({ apiKey: "CLE", fetch: (() => Promise.resolve(new Response(body, { status: 400 }))) as any });
+  await assert.rejects(p.send("s", [{ role: "user", content: "q" }]), (e: any) => e.failure === "config" && e.detail.reason === "API_KEY_INVALID" && !e.detail.message.includes("CLE"));
+  const r = await handle(post(ok), deps({ provider: p }));
+  assert.equal(r.status, 502); assert.deepEqual(await r.json(), { error: "provider_error" });
+});

@@ -23,8 +23,27 @@ if (!key) { console.error('GEMINI_API_KEY est absente.'); process.exit(2); }
   console.log('Réponse reçue (' + r.usage.inputTokens + ' jetons en entrée, ' + r.usage.outputTokens + ' en sortie, refus : ' + r.refused + ', tronquée : ' + r.truncated + ')\n');
   console.log(r.text);
   process.exit(r.text ? 0 : 1);
-})().catch(function (e) {
-  var why = { free_limit: 'limite gratuite atteinte (429)', busy: 'service indisponible', config: 'clé ou projet refusé par Google (' + e.status + ')' }[e.failure] || e.message;
+})().catch(async function (e) {
+  var why = { free_limit: 'limite gratuite atteinte (429)', busy: 'service indisponible', config: 'requête refusée par Google (' + e.status + ')' }[e.failure] || e.message;
   console.error('Échec : ' + why);
+  if (e.detail) {
+    console.error('  Modèle      : ' + e.detail.model);
+    console.error('  Requête     : POST /v1beta/models/' + e.detail.model + ':generateContent (systemInstruction, contents, generationConfig.maxOutputTokens)');
+    console.error('  Statut      : ' + (e.detail.googleStatus || 'non précisé'));
+    console.error('  Raison      : ' + (e.detail.reason || 'non précisée'));
+    console.error('  Message     : ' + e.detail.message);
+  }
+  if (e.failure === 'config') await listModels();
   process.exit(1);
 });
+
+/** Modèles que cette clé voit réellement, parmi ceux de l'offre gratuite. */
+async function listModels() {
+  try {
+    var res = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', { headers: { 'x-goog-api-key': key } });
+    if (!res.ok) { console.error('  Liste des modèles : refusée (' + res.status + ')'); return; }
+    var names = ((await res.json()).models || []).filter(function (m) { return (m.supportedGenerationMethods || []).indexOf('generateContent') >= 0; }).map(function (m) { return m.name.replace('models/', ''); });
+    console.error('  Modèles generateContent visibles : ' + names.length);
+    console.error('  Dont Flash : ' + (names.filter(function (n) { return /flash/.test(n); }).join(', ') || 'aucun'));
+  } catch (err) { console.error('  Liste des modèles : réseau indisponible'); }
+}

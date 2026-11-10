@@ -14,8 +14,18 @@ export const DEFAULT_FALLBACK = "gemini-3.5-flash-lite";
 const HOST = "https://generativelanguage.googleapis.com/v1beta/models/";
 const REFUSALS = ["SAFETY", "RECITATION", "BLOCKLIST", "PROHIBITED_CONTENT", "SPII", "IMAGE_SAFETY"];
 
-function failure(code: string, status: number): Error {
-  return Object.assign(new Error(`gemini ${status}`), { failure: code, status });
+function failure(code: string, status: number, detail?: unknown): Error {
+  return Object.assign(new Error(`gemini ${status}`), { failure: code, status, detail });
+}
+
+/** Détail de l'erreur Google, pour le diagnostic serveur uniquement ; la clé est toujours masquée. */
+async function errorDetail(res: Response, model: string, apiKey: string) {
+  const raw = await res.text().catch(() => "");
+  let e: any = {};
+  try { e = JSON.parse(raw)?.error ?? {}; } catch { /* réponse non JSON */ }
+  const reason = (e.details ?? []).map((d: any) => d?.reason).filter(Boolean).join(",");
+  const message = String(e.message ?? raw).split(apiKey).join("[clé masquée]").slice(0, 600);
+  return { model, googleStatus: e.status ?? "", reason, message };
 }
 
 /** Réponse Gemini → format de la passerelle. Coût toujours nul : offre gratuite. */
@@ -54,11 +64,11 @@ export function geminiProvider(opts: { apiKey: string; model?: string; fallback?
           });
         } catch { last = failure("busy", 0); continue; }
         if (res.ok) return parseReply(await res.json());
-        await res.text().catch(() => "");
+        const detail = await errorDetail(res, m, opts.apiKey);
         // Le modèle de secours a son propre quota : on l'essaie si le premier est saturé.
-        if (res.status === 429) { last = failure("free_limit", 429); continue; }
-        if (res.status >= 500) { last = failure("busy", res.status); continue; }
-        throw failure("config", res.status);
+        if (res.status === 429) { last = failure("free_limit", 429, detail); continue; }
+        if (res.status >= 500) { last = failure("busy", res.status, detail); continue; }
+        throw failure("config", res.status, detail);
       }
       throw last;
     },
