@@ -21,7 +21,7 @@ function check(args) { return new Promise(function (done) { cp.execFile(process.
   var browser = await chromium.launch(), ctx = await browser.newContext();
   await ctx.route('**/config.js', function (r) { r.fulfill({ status: 200, contentType: 'text/javascript', body: 'window.TCL_CONFIG={supabaseUrl:"' + API + '",supabaseAnonKey:"' + mock.ANON_KEY + '",siteUrl:""};' }); });
   var page = await ctx.newPage();
-  var OTP = //auth/v1/otp/;
+  var OTP = new RegExp('/auth/v1/otp');
   async function attempt(mode, status, body, re, name) {
     await page.unroute(OTP).catch(function () {});
     await page.route(OTP, function (r) { r.fulfill({ status: status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*' }, body: JSON.stringify(body) }); });
