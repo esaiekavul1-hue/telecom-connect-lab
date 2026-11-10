@@ -14,7 +14,7 @@
     "dev": "node tools/dev-server.js",
     "ai:check": "node tools/ai-check.js",
     "auth:check": "node tools/auth-check.js",
-    "dev:reel": "node tools/serve-real.js",
+    "dev:reel": "node --env-file=.env tools/serve-real.js",
     "test:e2e:auth": "node tests/e2e-auth-email.js",
     "generate:assessments": "node tools/generate-assessments.js",
     "build": "node tools/generate-assessments.js && node tools/build-www.js",
