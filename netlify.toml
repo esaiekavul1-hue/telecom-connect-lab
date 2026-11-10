@@ -1,0 +1,42 @@
+# TELECOM CONNECT LAB 2.0 — publication Netlify
+# Site : dossier www (liste blanche de tools/build-www.js : ni banque de questions, ni SQL, ni outils).
+# Assistant : netlify/functions/ai-tutor.mts, servi sur /functions/v1/ai-tutor.
+# Secrets à saisir dans Netlify (Site configuration > Environment variables), jamais ici :
+#   GEMINI_API_KEY, SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
+
+[build]
+  publish = "www"
+  command = "node tools/build-www.js"
+
+[build.environment]
+  NODE_VERSION = "22"
+  # Les navigateurs de test ne servent qu'en local.
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+# Toujours revalidés : une nouvelle version est prise dès la publication.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/config.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"

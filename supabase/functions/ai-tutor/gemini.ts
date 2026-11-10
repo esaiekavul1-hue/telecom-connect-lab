@@ -42,7 +42,11 @@ export function toContents(messages: ChatMessage[]) {
   return messages.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] }));
 }
 
-export function geminiProvider(opts: { apiKey: string; model?: string; fallback?: string; fetch?: typeof fetch; timeoutMs?: number }): Provider {
+/**
+ * budgetMs : durée totale accordée à une réponse, modèle de secours compris
+ * (Netlify interrompt une fonction synchrone après 10 s). Sans budget : 45 s par modèle.
+ */
+export function geminiProvider(opts: { apiKey: string; model?: string; fallback?: string; fetch?: typeof fetch; timeoutMs?: number; budgetMs?: number }): Provider {
   const model = opts.model || DEFAULT_MODEL;
   const fallback = opts.fallback === undefined ? DEFAULT_FALLBACK : opts.fallback;
   for (const m of [model, fallback]) if (m && !FREE_MODELS.includes(m)) throw new Error(`Modèle hors offre gratuite refusé : ${m}`);
@@ -53,14 +57,17 @@ export function geminiProvider(opts: { apiKey: string; model?: string; fallback?
     name: "gemini",
     async send(system, messages) {
       let last: Error = failure("busy", 0);
+      const end = opts.budgetMs ? Date.now() + opts.budgetMs : Infinity;
       for (const m of models) {
+        const left = end - Date.now();
+        if (left < 1500) break; // trop tard pour un nouvel essai : la demande est rendue à l'étudiant
         let res: Response;
         try {
           res = await call(`${HOST}${m}:generateContent`, {
             method: "POST",
             headers: { "Content-Type": "application/json", "x-goog-api-key": opts.apiKey },
             body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: toContents(messages), generationConfig: { maxOutputTokens: 4000 } }),
-            signal: AbortSignal.timeout(opts.timeoutMs ?? 45_000),
+            signal: AbortSignal.timeout(Math.min(opts.timeoutMs ?? 45_000, left)),
           });
         } catch { last = failure("busy", 0); continue; }
         if (res.ok) return parseReply(await res.json());

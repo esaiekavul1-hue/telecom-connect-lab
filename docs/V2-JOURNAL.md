@@ -11,6 +11,8 @@ Branche : `v2`. Point de retour de la V1 : tag `v1-baseline`. Rien n'a été pub
 | `npm run test:e2e` | Parcours V1 dans Chromium. |
 | `npm run test:e2e:v2` | Parcours V2 dans Chromium (serveur local). |
 | `npm run test:e2e:catalogue` | Parcourt tout le catalogue dans Chromium, ordinateur et téléphone. |
+| `node tests/run-netlify-tests.js` | Netlify Function de l'assistant : sécurité, quotas, délais, CORS. |
+| `node tests/e2e-netlify.js` | Site « comme publié » : `www`, configuration de production, fonction sur `/functions/v1/ai-tutor` (Google simulé). |
 | `npm run build` | Régénère la banque SQL et le dossier `www`. |
 | `node tools/catalogue-report.js` | Régénère `docs/CATALOGUE.md`. |
 | `npm run cap:sync` | `build` puis copie vers Android et iOS. |
@@ -85,10 +87,10 @@ Dans cet ordre, sur le projet Supabase existant :
    - Annulation de la sécurisation : `supabase/rollback/20261110000200_v2_access_hardening.down.sql` (aucune donnée supprimée).
 3. Se désigner administrateur :
    `update public.profiles set role = 'admin' where id = (select id from auth.users where email = 'VOTRE_EMAIL');`
-4. Assistant IA, offre gratuite Gemini uniquement : voir `supabase/functions/ai-tutor/gemini.ts`. `supabase functions deploy ai-tutor`, puis `supabase secrets set GEMINI_API_KEY=… ALLOWED_ORIGINS=https://dainty-biscuit-3fc767.netlify.app,https://localhost,capacitor://localhost`. Le projet Google ne doit avoir aucune facturation.
+4. Assistant IA, offre gratuite Gemini uniquement : Netlify Function `netlify/functions/ai-tutor.mts` (même logique que `supabase/functions/ai-tutor/`), servie par le site sur `/functions/v1/ai-tutor`. Variables d'environnement Netlify : `GEMINI_API_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (facultatives : `ALLOWED_ORIGINS` pour un domaine personnalisé, `AI_MODEL`, `AI_FALLBACK_MODEL`). Le projet Google ne doit avoir aucune facturation. Une réponse doit arriver en moins de 9 s (limite Netlify de 10 s) ; sinon la demande est rendue à l'étudiant.
    Conditions Google de l'offre gratuite : 18 ans minimum, pas de données personnelles, contenus réutilisables par Google et relus par des personnes. L'interface fait confirmer ces points ; e-mails et téléphones sont masqués par la passerelle.
    Codes de connexion : SMTP Brevo à saisir uniquement dans Supabase (Authentication > Emails > SMTP Settings), modèles `supabase/email-template-*.html`. Test sur une adresse : `npm run auth:check -- adresse`, puis `npm run dev:reel`.
-5. Publier `www` sur Netlify, reconstruire l'APK.
+5. Publier sur Netlify : `netlify.toml` fixe le dossier `www`, la construction (`node tools/build-www.js`), la fonction et les en-têtes. Si l'adresse du site change, mettre à jour `siteUrl` dans `config.js` (liens de connexion, assistant de l'application mobile) et les adresses autorisées dans Supabase (Authentication > URL Configuration). Reconstruire ensuite l'APK.
 
 ### Nécessite une validation scientifique
 - Leçons, laboratoires et 323 questions : relecture par un enseignant avant tout usage à enjeu.

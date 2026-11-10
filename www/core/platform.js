@@ -59,8 +59,22 @@
     select: function (query) { return restCall('GET', query); },
     update: function (query, body) { return restCall('PATCH', query, body); },
     /** Passerelle IA : renvoie { status, data } sans lever d'erreur pour les statuts métier. */
-    tutor: function (body) { return call('POST', '/functions/v1/ai-tutor', body, null, (root.TCL_CONFIG || {}).aiGateway); }
+    tutor: function (body) { return call('POST', '/functions/v1/ai-tutor', body, null, aiGateway()); }
   };
+
+  /*
+   * Passerelle de l'assistant (la clé Gemini reste sur le serveur) :
+   *   aiGateway configuré : cette adresse (serveurs locaux) ;
+   *   application mobile : le site publié (siteUrl) ;
+   *   site web : la fonction Netlify du site lui-même.
+   */
+  function aiGateway() {
+    var c = root.TCL_CONFIG || {}, trim = function (u) { return String(u).replace(/\/+$/, ''); };
+    if (c.aiGateway) return trim(c.aiGateway);
+    var cap = root.Capacitor;
+    if (cap && typeof cap.isNativePlatform === 'function' && cap.isNativePlatform()) return c.siteUrl ? trim(c.siteUrl) : null;
+    return /^https?:$/.test(root.location.protocol) ? root.location.origin : null;
+  }
 
   /* ------------------------- Données officielles ------------------------- */
 

@@ -23,6 +23,10 @@
  *
  * siteUrl (facultatif) : adresse publique du site, utilisée pour le lien magique
  *   contenu dans l'e-mail. Si elle est vide, l'adresse de la page actuelle est utilisée.
+ *   L'application mobile y joint aussi l'assistant (fonction Netlify du site publié).
+ *
+ * Assistant : sur le site web, la fonction Netlify du même site (/functions/v1/ai-tutor).
+ *   La clé Gemini se saisit dans Netlify, JAMAIS ici.
  */
 window.TCL_CONFIG = {
 supabaseUrl: 'https://jiaidnmcjbyzyxhmeulq.supabase.co',

@@ -127,7 +127,7 @@ async function start(options) {
   var apiPort = options.apiPort || 54321, sitePort = options.sitePort || 8080, webRoot = options.webRoot || ROOT;
   var api = mock.createServer({ handle: handle });
   var printed = {};
-  var config = 'window.TCL_CONFIG = { supabaseUrl: "http://localhost:' + apiPort + '", supabaseAnonKey: "' + mock.ANON_KEY + '", siteUrl: "" };\n';
+  var config = 'window.TCL_CONFIG = { supabaseUrl: "http://localhost:' + apiPort + '", supabaseAnonKey: "' + mock.ANON_KEY + '", siteUrl: "", aiGateway: "http://localhost:' + apiPort + '" };\n';
   var site = http.createServer(function (req, res) {
     var p = decodeURIComponent(req.url.split('?')[0]);
     if (p === '/') p = '/index.html';
