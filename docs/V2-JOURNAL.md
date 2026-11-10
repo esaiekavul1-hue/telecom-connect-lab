@@ -75,7 +75,7 @@ Les pages de cours restent librement accessibles : les prérequis ferment l'éva
 ### Nécessite une configuration externe (décision du fondateur)
 Dans cet ordre, sur le projet Supabase existant :
 1. Faire une sauvegarde de la base.
-2. SQL Editor, dans cet ordre : `supabase/migrations/20261108000100_v2_core.sql`, `supabase/migrations/20261108000200_v2_tracks.sql`, `supabase/migrations/20261110000100_v2_pro_access.sql`, puis `supabase/seed/assessments.generated.sql`.
+2. SQL Editor, dans cet ordre : `supabase/migrations/20261108000100_v2_core.sql`, `supabase/migrations/20261108000200_v2_tracks.sql`, `supabase/migrations/20261110000100_v2_pro_access.sql`, puis `supabase/seed/assessments.generated.sql`. Exécuter chaque fichier une seule fois et s'arrêter à la première erreur. Une migration rejouée seule rétablit d'anciennes règles d'accès : en cas de reprise, relancer les quatre fichiers dans cet ordre.
 3. Se désigner administrateur :
    `update public.profiles set role = 'admin' where id = (select id from auth.users where email = 'VOTRE_EMAIL');`
 4. Assistant IA, offre gratuite Gemini uniquement : voir `supabase/functions/ai-tutor/gemini.ts`. `supabase functions deploy ai-tutor`, puis `supabase secrets set GEMINI_API_KEY=… ALLOWED_ORIGINS=https://dainty-biscuit-3fc767.netlify.app,https://localhost,capacitor://localhost`. Le projet Google ne doit avoir aucune facturation.

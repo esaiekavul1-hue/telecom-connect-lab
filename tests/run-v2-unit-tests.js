@@ -151,6 +151,8 @@ test('changement : monter exige l’entrée ; descendre, non', function () {
   assert.strictEqual(locked.allowed, false); assert.strictEqual(locked.missing.length, Object.keys(all).length - 1);
   assert.strictEqual(CUR.checkMove({ space: 'master' }, { space: 'pro' }, {}).allowed, false);
   assert.strictEqual(CUR.checkMove({ space: 'l1' }, { space: 'pro' }, all).allowed, true);
+  var pv = {}; CUR.trackModules('preparatoire', null).core.forEach(function (c) { pv[c] = {}; });
+  assert.strictEqual(CUR.checkMove({ space: 'preparatoire' }, { space: 'pro' }, pv, false, { space: 'l1' }).allowed, false, 'descendre ne réduit pas l’exigence');
   ['preparatoire', 'l1', 'l2', 'l3', 'master'].forEach(function (x) { assert.strictEqual(CUR.checkMove({ space: 'pro' }, { space: x }, {}, true).allowed, true, x); });
   assert.strictEqual(CUR.checkMove({ space: 'pro' }, { space: 'l1' }, {}).allowed, false);
   assert.strictEqual(CUR.checkMove({ space: 'l1' }, { space: 'l1' }, {}).same, true);

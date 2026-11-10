@@ -20,6 +20,7 @@ declare
   tgt_row private.track_catalog;
   missing text[];
   direct  boolean;
+  ref_key text;
 begin
   perform private.expire_stale(uid);
   select * into prof from public.profiles where id = uid for update;
@@ -37,10 +38,16 @@ begin
 
   direct := private.is_direct_pro(uid);
 
-  -- Un étudiant ne rejoint le Monde professionnel qu'après toutes les évaluations de son parcours.
+  -- Un étudiant ne rejoint le Monde professionnel qu'après toutes les évaluations de son parcours :
+  -- le niveau le plus élevé qu'il a occupé, pour qu'une descente ne réduise pas l'exigence.
   if not direct and p_space = 'pro' and prof.space <> 'pro' then
+    select coalesce((
+      select c.track_key from public.track_history h
+      join private.track_catalog c on c.track_key = private.track_key(h.to_space, h.to_specialization)
+      where h.user_id = uid and c.rank is not null order by c.rank desc limit 1
+    ), cur_row.track_key) into ref_key;
     select coalesce(array_agg(c.competency order by c.competency), '{}') into missing from private.track_competencies c
-     where c.track_key = cur_row.track_key
+     where c.track_key = ref_key
        and not exists (select 1 from public.competency_validations v where v.user_id = uid and v.competency = c.competency);
     if array_length(missing, 1) > 0 then
       raise exception 'Compétences à valider avant ce parcours : %', array_to_string(missing, ', ') using errcode = 'P0001', hint = 'entry_missing';

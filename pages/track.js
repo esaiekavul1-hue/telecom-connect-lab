@@ -80,9 +80,10 @@
     }
     var online = off.status === 'ready';
     var directPro = (off.history || []).some(function (h) { return h.kind === 'initial' && h.to_space === 'pro'; });
+    var highest = (off.history || []).reduce(function (best, h) { var r = (CUR.spaceById(h.to_space) || {}).rank; return r != null && (!best || r > CUR.spaceById(best.space).rank) ? { space: h.to_space, specialization: h.to_specialization } : best; }, null);
     var cards = CUR.spaces.map(function (s) {
       var isCurrent = t.space === s.id;
-      var move = CUR.checkMove(t, { space: s.id, specialization: s.id === 'pro' ? (t.space === 'pro' ? t.specialization : null) : null }, off.validated, directPro);
+      var move = CUR.checkMove(t, { space: s.id, specialization: s.id === 'pro' ? (t.space === 'pro' ? t.specialization : null) : null }, off.validated, directPro, highest);
       var body;
       if (isCurrent && s.id !== 'pro') body = P.statusBadge('Parcours actuel');
       else if (move.allowed || move.same) {

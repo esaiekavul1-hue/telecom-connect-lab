@@ -353,11 +353,12 @@ async function rejects(p, re) {
   });
   await test('étudiant : monde professionnel fermé tant que son parcours n’est pas validé ; redescendre reste libre', async function () {
     assert.strictEqual((await L.rpc(t1, 'change_track', { p_space: 'preparatoire' })).space, 'preparatoire');
-    await rejects(L.rpc(t1, 'change_track', { p_space: 'pro', p_specialization: 'pro-reseaux' }), /à valider avant ce parcours : binaire, iot-intro, ordinateur/);
-    assert.strictEqual((await profile(t1)).space, 'preparatoire');
     await validate(t1, ['binaire', 'ordinateur', 'iot-intro']);
+    await rejects(L.rpc(t1, 'change_track', { p_space: 'pro', p_specialization: 'pro-reseaux' }), /à valider avant ce parcours/);
+    assert.strictEqual((await profile(t1)).space, 'preparatoire', 'descendre ne réduit pas l’exigence');
+    await validate(t1, (await L.db.query("select competency from private.track_competencies where track_key = 'l2' and competency not in ('circuits','signaux','binaire','ordinateur','iot-intro')")).rows.map(function (x) { return x.competency; }));
     assert.strictEqual((await L.rpc(t1, 'change_track', { p_space: 'pro', p_specialization: 'pro-reseaux' })).specialization, 'pro-reseaux');
-    await rejects(L.rpc(t1, 'change_track', { p_space: 'l3' }), /à valider avant ce parcours/);
+    await rejects(L.rpc(t1, 'change_track', { p_space: 'master' }), /à valider avant ce parcours/);
   });
   await test('inscrit en professionnel : tous les niveaux librement, sans validation', async function () {
     var dp = await L.createUser('direct-pro@exemple.org');

@@ -35,6 +35,10 @@ begin
   values (new.id, left(new.raw_user_meta_data ->> 'full_name', 120))
   on conflict (id) do nothing;
   return new;
+exception when others then
+  -- Un profil manquant se recrée au premier choix de parcours : ne jamais bloquer une inscription (V1 comprise).
+  raise warning 'tcl_on_auth_user_created : %', sqlerrm;
+  return new;
 end $$;
 
 drop trigger if exists tcl_on_auth_user_created on auth.users;
@@ -61,7 +65,7 @@ create policy profiles_update_own on public.profiles for update to authenticated
 revoke all on public.profiles from anon, authenticated;
 grant select on public.profiles to authenticated;
 -- Le rôle n'est PAS modifiable par l'utilisateur : droits limités à ces colonnes.
-grant update (display_name, space) on public.profiles to authenticated;
+grant update (display_name) on public.profiles to authenticated;
 
 -- ---------------------------------------------------------------------
 -- Paramètres de la plateforme
