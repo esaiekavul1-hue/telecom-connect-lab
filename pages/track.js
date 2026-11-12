@@ -7,6 +7,7 @@
 (function (root) {
   'use strict';
   var TCL = root.TCL;
+  var PRO_MIN = 10, PRO_INTERIM = 'l1';
   var U = TCL.util, I = TCL.icon, esc = U.esc, P = TCL.pages, O = TCL.official, CUR = TCL.curriculum, A = TCL.access;
   /** Un cours est disponible si tous ses modules sont déclarés complets au catalogue (leçon, TP, exercices). */
   function courseReady(c) {
@@ -24,8 +25,8 @@
   }
   function title(id) { return (CUR.competencies[id] || {}).title || id; }
 
-  function specOptions(selected) {
-    return '<option value="">Tous les métiers (je préciserai plus tard)</option>' + CUR.specializations().map(function (c) {
+  function specOptions(selected, required) {
+    return (required ? '<option value="">Choisissez votre spécialisation</option>' : '<option value="">Tous les métiers (je préciserai plus tard)</option>') + CUR.specializations().map(function (c) {
       return '<option value="' + c.id + '"' + (c.id === selected ? ' selected' : '') + '>' + esc(c.title) + (c.modules.length ? '' : ' (à développer)') + '</option>';
     }).join('');
   }
@@ -43,35 +44,43 @@
     }).join('');
     main.innerHTML = '<div class="container page page--narrow">' +
       P.head('Bienvenue' + (u.name ? ', ' + u.name : ''), 'Choisissez votre niveau d’études actuel : vous commencez directement à ce niveau, sans devoir terminer les précédents. Vous pourrez en changer à tout moment, sans perdre vos résultats.') +
-      '<form id="track-form" novalidate><fieldset class="track-options"><legend class="h-sub">Votre niveau d’études</legend>' + options + '</fieldset>' +
+      '<form id="track-form" novalidate><fieldset class="track-options" id="level-box"><legend class="h-sub">Votre niveau d’études</legend>' + options + '</fieldset>' +
       '<div class="box" id="placement-box" hidden><label class="check"><input type="checkbox" id="placement-ask"> Passer d’abord un test de positionnement (facultatif)</label>' +
       '<p class="muted small">Il repère les bases des niveaux précédents que vous maîtrisez déjà. Sans ce test, vous commencez directement : les bases utiles vous seront proposées comme révisions recommandées.</p></div>' +
       '<div class="box pro-ask"><h2 class="h-sub">Parcours professionnel</h2><label class="check"><input type="checkbox" id="pro-ask"> Je suis un professionnel des télécommunications</label>' +
-      '<div id="pro-box" hidden><p class="muted small">L’administration examinera votre demande d’accès au Monde professionnel. En attendant, vous commencez dans le parcours choisi ci-dessus.</p>' +
-      '<div class="control"><label for="spec">Spécialisation souhaitée</label><select id="spec">' + specOptions('') + '</select></div>' +
-      '<div class="control"><label for="pro-msg">Votre expérience (facultatif)</label><textarea id="pro-msg" rows="3" maxlength="300" placeholder="Métier, années d’expérience, équipements maîtrisés…"></textarea></div></div></div>' +
+      '<div id="pro-box" hidden><p class="muted small">Aucun niveau universitaire n’est demandé. L’administration examinera votre demande d’accès au Monde professionnel ; en attendant sa décision, vous accédez aux contenus de Licence 1.</p>' +
+      '<div class="control"><label for="spec">Spécialisation souhaitée (obligatoire)</label><select id="spec" required>' + specOptions('', true) + '</select></div>' +
+      '<div class="control"><label for="pro-msg">Votre expérience (obligatoire, ' + PRO_MIN + ' caractères minimum)</label><textarea id="pro-msg" rows="3" maxlength="300" required placeholder="Métier, années d’expérience, équipements maîtrisés…"></textarea></div></div></div>' +
       '<p class="muted note">Un niveau signalé « Bientôt disponible » peut être choisi : ses cours apparaîtront dès leur publication. Vos résultats sont toujours conservés.</p>' +
-      '<p class="field-error" id="track-err" role="alert"></p><button type="submit" class="btn btn--primary btn--lg btn--block" id="track-ok" disabled>' + I('check') + 'Confirmer mon parcours</button></form></div>';
+      '<p class="field-error" id="track-err" role="alert"></p><button type="submit" class="btn btn--primary btn--lg btn--block" id="track-ok" disabled>' + I('check') + '<span id="track-ok-label">Confirmer mon parcours</span></button></form></div>';
     var form = U.qs('#track-form', main), ok = U.qs('#track-ok', main), err = U.qs('#track-err', main), proAsk = U.qs('#pro-ask', main), proBox = U.qs('#pro-box', main);
-    var placementBox = U.qs('#placement-box', main), placementAsk = U.qs('#placement-ask', main);
+    var placementBox = U.qs('#placement-box', main), placementAsk = U.qs('#placement-ask', main), levelBox = U.qs('#level-box', main);
+    var spec = U.qs('#spec', main), msg = U.qs('#pro-msg', main), okLabel = U.qs('#track-ok-label', main);
     function chosen() { return (U.qs('input[name=track]:checked', form) || {}).value; }
-    U.qsa('input[name=track]', form).forEach(function (r) {
-      r.addEventListener('change', function () {
-        ok.disabled = false; err.textContent = '';
-        // Le positionnement porte sur les niveaux précédents : rien à positionner en Préparatoire.
-        placementBox.hidden = !(CUR.spaceById(chosen()).rank >= 1);
-        if (placementBox.hidden) placementAsk.checked = false;
-      });
-    });
-    proAsk.addEventListener('change', function () { proBox.hidden = !proAsk.checked; });
+    function proValid() { return !!spec.value && msg.value.trim().length >= PRO_MIN; }
+    /** Étudiant : un niveau est obligatoire. Professionnel : seuls les champs de la demande le sont. */
+    function refresh() {
+      var isPro = proAsk.checked, level = chosen();
+      levelBox.hidden = isPro; proBox.hidden = !isPro;
+      // Le positionnement porte sur les niveaux précédents : rien à positionner en Préparatoire.
+      placementBox.hidden = isPro || !(level && CUR.spaceById(level).rank >= 1);
+      if (placementBox.hidden) placementAsk.checked = false;
+      okLabel.textContent = isPro ? 'Soumettre ma demande' : 'Confirmer mon parcours';
+      ok.disabled = isPro ? !proValid() : !level;
+    }
+    U.qsa('input[name=track]', form).forEach(function (r) { r.addEventListener('change', function () { err.textContent = ''; refresh(); }); });
+    [proAsk, spec].forEach(function (x) { x.addEventListener('change', function () { err.textContent = ''; refresh(); }); });
+    msg.addEventListener('input', refresh);
     form.addEventListener('submit', function (e) {
       e.preventDefault();
-      var space = chosen();
-      if (!space) return;
-      var pro = proAsk.checked ? { specialization: U.qs('#spec', form).value || null, message: U.qs('#pro-msg', form).value.trim() || null } : null;
+      var pro = proAsk.checked ? { specialization: spec.value, message: msg.value.trim() } : null;
+      if (pro ? !proValid() : !chosen()) return;
+      // Le serveur exige un parcours avant toute demande : Licence 1 en attendant la décision de l'administration.
+      var space = pro ? PRO_INTERIM : chosen();
       ok.disabled = true; err.textContent = '';
-      saveInitial(space, pro).then(function () {
-        U.toast('Parcours enregistré : ' + CUR.trackLabel(space, null) + (pro ? '. Demande d’accès professionnel transmise.' : ''), 'success');
+      saveInitial(space, pro).then(function (sent) {
+        if (pro && sent === false) { root.location.hash = '#/changer-parcours'; return; }
+        U.toast(pro ? 'Demande d’accès professionnel transmise. Elle sera examinée par l’administration.' : 'Parcours enregistré : ' + CUR.trackLabel(space, null), 'success');
         // Le profil rafraîchi peut déjà avoir quitté la page d'accueil : le positionnement demandé passe avant.
         if (placementAsk.checked) root.location.hash = '#/evaluations';
         else if (root.location.hash === '#/bienvenue') root.location.hash = '#/mon-espace';
@@ -88,10 +97,11 @@
     if (O.get().status === 'ready') {
       return TCL.api.rpc('choose_initial_track', { p_space: space, p_specialization: null }).then(function () {
         if (!pro) return null;
-        return TCL.api.rpc('request_pro', { p_specialization: pro.specialization, p_message: pro.message }).catch(function (e) {
-          U.toast('Demande professionnelle non transmise (' + e.message + '). Vous pourrez la renouveler depuis « Changer de parcours ».', 'error');
+        return TCL.api.rpc('request_pro', { p_specialization: pro.specialization, p_message: pro.message }).then(function () { return true; }, function (e) {
+          U.toast('Demande professionnelle non transmise (' + e.message + '). Renouvelez-la depuis « Changer de parcours ».', 'error');
+          return false;
         });
-      }).then(function () { return O.refresh(); });
+      }).then(function (sent) { return O.refresh().then(function () { return sent; }); });
     }
     // Conservé sur l'appareil tout de suite ; la synchronisation réessaie seule en cas de coupure.
     TCL.store.update(function (s) { s.prefs.track = { space: space, specialization: null, pro: !!pro, proSpecialization: pro ? pro.specialization : null, proMessage: pro ? pro.message : null, at: new Date().toISOString() }; }, 'track');

@@ -45,8 +45,9 @@ async function login(p, email, name) {
 async function chooseTrack(p, space, spec) {
   var start = space === 'pro' ? 'l1' : space;
   await p.waitForSelector('#track-form', { timeout: 8000 });
-  await p.check('input[name=track][value=' + start + ']');
-  if (space === 'pro') { await p.check('#pro-ask'); if (spec) await p.selectOption('#spec', spec); }
+  // Mode professionnel : aucun niveau à cocher, spécialisation et expérience obligatoires.
+  if (space === 'pro') { await p.check('#pro-ask'); await p.selectOption('#spec', spec || 'pro-reseaux'); await p.fill('#pro-msg', 'Technicien depuis 5 ans'); }
+  else await p.check('input[name=track][value=' + start + ']');
   await p.click('#track-ok');
   await waitHash(p, '#/mon-espace');
   if (space !== start && space !== 'pro') {
@@ -147,10 +148,22 @@ function rpcResult(p, name, args) { return p.evaluate(function (a) { return TCL.
   await shot(p, '05-choix-parcours');
   await p.goto(S.site + '#/lecons'); await waitHash(p, '#/bienvenue');
   ok('impossible de contourner le choix', true);
+  var btn = async function () { return { label: (await text(p, '#track-ok')).trim(), off: await p.isDisabled('#track-ok') }; };
+  var b0 = await btn();
+  ok('mode étudiant : niveau obligatoire avant confirmation', b0.off && /Confirmer mon parcours/.test(b0.label), JSON.stringify(b0));
   await p.check('#pro-ask');
   ok('demande professionnelle : spécialisations proposées', await p.isVisible('#spec') && (await p.$$('#spec option')).length === 8 && await p.isVisible('#pro-msg'));
+  var b1 = await btn();
+  ok('mode professionnel : aucun niveau universitaire demandé, bouton « Soumettre ma demande »', !(await p.isVisible('#level-box')) && /Soumettre ma demande/.test(b1.label) && b1.off, JSON.stringify(b1));
+  await p.selectOption('#spec', 'pro-fibre'); await p.fill('#pro-msg', 'court');
+  ok('mode professionnel : bouton inactif tant que l’expérience est incomplète', await p.isDisabled('#track-ok'));
+  await p.fill('#pro-msg', 'Technicien fibre depuis 6 ans');
+  ok('mode professionnel : bouton actif dès que les champs obligatoires sont remplis, sans niveau', !(await p.isDisabled('#track-ok')) && (await p.$$('input[name=track]:checked')).length === 0);
+  await p.selectOption('#spec', '');
+  ok('mode professionnel : spécialisation obligatoire', await p.isDisabled('#track-ok'));
   await p.uncheck('#pro-ask');
-  ok('demande professionnelle facultative, masquée sinon', !(await p.isVisible('#spec')));
+  var b2 = await btn();
+  ok('retour au mode étudiant : niveaux affichés, champs professionnels masqués, niveau toujours exigé', !(await p.isVisible('#spec')) && await p.isVisible('#level-box') && b2.off && /Confirmer mon parcours/.test(b2.label), JSON.stringify(b2));
   ok('Monde professionnel à l’inscription : refusé par le serveur sans approbation', /Monde professionnel s'ouvre par une demande approuvée/.test(await rpcResult(p, 'choose_initial_track', { p_space: 'pro', p_specialization: null })));
   await p.check('input[name=track][value=l3]');
   ok('test de positionnement facultatif proposé à partir de la L1', await p.isVisible('#placement-ask') && !(await p.isChecked('#placement-ask')));
