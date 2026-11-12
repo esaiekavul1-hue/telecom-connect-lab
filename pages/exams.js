@@ -17,7 +17,8 @@
     var st = O.get(), mine = st.attempts.filter(function (t) { return t.assessment_id === a.id; });
     var open = mine.filter(function (t) { return t.status === 'in_progress'; })[0];
     var best = mine.reduce(function (b, t) { return t.percent != null ? Math.max(b, Number(t.percent)) : b; }, -1);
-    var missing = a.prerequisites.filter(function (p) { return !st.validated[p]; });
+    var t = TCL.access.track(), opt = t.state === 'set' ? CUR.lowerLevelCompetencies(t.space) : {};
+    var missing = a.prerequisites.filter(function (p) { return !st.validated[p] && !opt[p]; });
     var done = a.competency ? !!st.validated[a.competency] : (a.grants.length && a.grants.every(function (g) { return st.validated[g]; }));
     var badge = done ? P.statusPill('validated') : missing.length ? P.statusPill('locked') : '';
     return '<li class="exam-row"><div><h3><a href="#/evaluations/' + a.id + '">' + esc(a.title) + '</a></h3><p class="muted">' + a.question_count + ' questions · ' + fmtDuration(a.duration_seconds) + ' · réussite à ' + Number(a.pass_percent) + ' %' + (best >= 0 ? ' · meilleur résultat ' + best + ' %' : '') + '</p></div>' + badge +

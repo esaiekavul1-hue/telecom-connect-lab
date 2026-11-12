@@ -69,7 +69,7 @@
   function tag(id) {
     var s = scope();
     if (!s) return '';
-    if (s.prerequisites.indexOf(id) >= 0) return 'Base à consolider';
+    if (s.prerequisites.indexOf(id) >= 0) return CUR.lowerLevelCompetencies(s.track.space)[id] ? 'Révision recommandée' : 'Base à consolider';
     if (s.other.indexOf(id) >= 0) return 'Hors de votre parcours';
     return '';
   }

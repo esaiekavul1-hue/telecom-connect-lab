@@ -41,10 +41,9 @@ async function login(p, email, name) {
   await p.waitForFunction(function () { return /Déconnexion/.test(document.querySelector('#nav-auth').textContent); }, null, { timeout: 8000 });
   await p.waitForTimeout(700);
 }
-// À l'inscription : Préparatoire ou L1 (avec demande professionnelle pour « pro »).
-// Un niveau supérieur est ensuite placé directement en base, pour les scénarios qui en ont besoin.
+// À l'inscription : le niveau d'études choisi (L1 avec demande professionnelle pour « pro »).
 async function chooseTrack(p, space, spec) {
-  var start = space === 'preparatoire' ? 'preparatoire' : 'l1';
+  var start = space === 'pro' ? 'l1' : space;
   await p.waitForSelector('#track-form', { timeout: 8000 });
   await p.check('input[name=track][value=' + start + ']');
   if (space === 'pro') { await p.check('#pro-ask'); if (spec) await p.selectOption('#spec', spec); }
@@ -140,7 +139,10 @@ function rpcResult(p, name, args) { return p.evaluate(function (a) { return TCL.
   var email = 'etudiant@exemple.org';
   await login(p, email, 'Etudiant Test');
   await waitHash(p, '#/bienvenue');
-  ok('après inscription : Préparatoire ou Licence 1 proposés', (await p.$$eval('input[name=track]', function (a) { return a.map(function (x) { return x.value; }).join(); })) === 'preparatoire,l1');
+  ok('après inscription : Préparatoire, L1, L2, L3 et Master proposés', (await p.$$eval('input[name=track]', function (a) { return a.map(function (x) { return x.value; }).join(); })) === 'preparatoire,l1,l2,l3,master');
+  var metas = await p.$$eval('.track-option__meta', function (a) { return a.map(function (x) { return x.textContent; }); });
+  ok('disponibilité des cours indiquée pour chaque niveau', metas.length === 5 && metas.every(function (m) { return /cours disponibles|pas encore disponibles/.test(m); }), metas.join(' | '));
+  ok('parcours professionnel présenté à part', /Parcours professionnel/.test(await text(p, '.pro-ask')));
   ok('rubriques masquées tant que le parcours n’est pas choisi', (await p.$$('#nav-list .nav__link:not(.nav__link--auth)')).length === 0);
   await shot(p, '05-choix-parcours');
   await p.goto(S.site + '#/lecons'); await waitHash(p, '#/bienvenue');
@@ -149,7 +151,11 @@ function rpcResult(p, name, args) { return p.evaluate(function (a) { return TCL.
   ok('demande professionnelle : spécialisations proposées', await p.isVisible('#spec') && (await p.$$('#spec option')).length === 8 && await p.isVisible('#pro-msg'));
   await p.uncheck('#pro-ask');
   ok('demande professionnelle facultative, masquée sinon', !(await p.isVisible('#spec')));
-  ok('premier parcours au-delà de L1 refusé par le serveur', /premier parcours est Préparatoire ou Licence 1/.test(await rpcResult(p, 'choose_initial_track', { p_space: 'master', p_specialization: null })) && /premier parcours/.test(await rpcResult(p, 'choose_initial_track', { p_space: 'pro', p_specialization: null })));
+  ok('Monde professionnel à l’inscription : refusé par le serveur sans approbation', /Monde professionnel s'ouvre par une demande approuvée/.test(await rpcResult(p, 'choose_initial_track', { p_space: 'pro', p_specialization: null })));
+  await p.check('input[name=track][value=l3]');
+  ok('test de positionnement facultatif proposé à partir de la L1', await p.isVisible('#placement-ask') && !(await p.isChecked('#placement-ask')));
+  await p.check('input[name=track][value=preparatoire]');
+  ok('aucun positionnement proposé en Préparatoire', !(await p.isVisible('#placement-ask')));
   await p.check('input[name=track][value=l1]');
   await p.click('#track-ok');
   await waitHash(p, '#/mon-espace');
@@ -191,6 +197,7 @@ function rpcResult(p, name, args) { return p.evaluate(function (a) { return TCL.
   ok('module hors parcours : page explicative, pas de contenu', off.length === 0, off.join(' '));
   await go(p, 'parcours');
   ok('Mon parcours : uniquement les cours de L1', /Mon parcours : Licence 1/.test(await text(p, 'main h1')) && (await p.$$('.course')).length === 7);
+  ok('révisions recommandées des niveaux précédents, non bloquantes, avec positionnement', await p.isVisible('#revisions') && /ne bloquent ni vos cours ni vos évaluations/.test(await text(p, '#revisions')) && /Représentation des données/.test(await text(p, '#revisions')) && (await p.$$('#revisions a[href^="#/evaluations/placement-"]')).length > 0, await text(p, 'main'));
 
   console.log('\nContrôles côté serveur');
   await go(p, 'mon-espace');
@@ -198,8 +205,8 @@ function rpcResult(p, name, args) { return p.evaluate(function (a) { return TCL.
   ok('second choix initial refusé', /déjà enregistré/.test(await rpcResult(p, 'choose_initial_track', { p_space: 'l3', p_specialization: null })));
   var patched = await p.evaluate(function () { return TCL.api.update('profiles?id=eq.' + TCL.auth.state().user.id, { space: 'master' }).then(function () { return 'OK'; }, function (e) { return e.kind; }); });
   ok('écrire directement son parcours : refusé', patched === 'forbidden' && (await profileOf(email)).space === 'l1', patched);
-  ok('changer de niveau sans prérequis : refusé', /à valider avant ce parcours/.test(await rpcResult(p, 'change_track', { p_space: 'l3', p_specialization: null })));
-  ok('prérequis d’une évaluation du parcours appliqué', /Prérequis non validés/.test(await rpcResult(p, 'start_attempt', { p_assessment: 'final-chaine' })));
+  ok('Monde professionnel sans approbation ni évaluations : refusé', /à valider avant ce parcours/.test(await rpcResult(p, 'change_track', { p_space: 'pro', p_specialization: null })));
+  ok('prérequis propre au niveau toujours appliqué', /Prérequis non validés : ac/.test(await rpcResult(p, 'start_attempt', { p_assessment: 'final-mesures' })));
   await p.evaluate(function () {
     var k = Object.keys(localStorage).filter(function (x) { return /^tcl\.official/.test(x); })[0];
     var c = JSON.parse(localStorage.getItem(k)); c.validated.signaux = { source: 'assessment', validated_at: '2026-01-01' }; c.profile.space = 'l3'; localStorage.setItem(k, JSON.stringify(c));
@@ -262,7 +269,7 @@ function rpcResult(p, name, args) { return p.evaluate(function (a) { return TCL.
 
   console.log('\nÉvolution du parcours');
   await go(p, 'changer-parcours');
-  ok('changement : prérequis manquants et test de positionnement proposés', /À valider d’abord : Comprendre les signaux/.test(await text(p, '.courses')) && (await p.$('[data-move=l2]')) === null && /Positionnement/.test(await text(p, '.courses')), await text(p, '.courses'));
+  ok('changement : tous les niveaux d’études ouverts sans prérequis', (await p.$$('[data-move=preparatoire],[data-move=l2],[data-move=l3],[data-move=master]')).length === 4 && !/À valider d’abord : Comprendre les signaux/.test(await text(p, '.courses')), await text(p, '.courses'));
   ok('étudiant L1 : Monde professionnel verrouillé dans le menu', (await p.$('[data-move=pro]')) === null && (await p.$('#spec-change')) === null);
   await shot(p, '09-changer-parcours');
   await go(p, 'evaluations/final-signaux'); await p.click('#start'); await p.waitForSelector('#eform');
@@ -281,13 +288,25 @@ function rpcResult(p, name, args) { return p.evaluate(function (a) { return TCL.
   ok('aucun résultat ni validation supprimés', after.a === before.a && after.v === before.v && after.v === 3, JSON.stringify([before, after]));
   ok('compétence de L1 toujours affichée', /Analyse des circuits/.test(await text(p, '.dash__side')) && /parcours précédent/.test(await text(p, '.dash__side')));
   await go(p, 'lecons');
-  ok('L2 : ses modules, le prérequis et l’ancien module signalés', (await p.$$('.card[data-module=fibre]')).length === 1 && /Hors de votre parcours/.test(await text(p, '.card[data-module=analyse]')) && /Base à consolider/.test(await text(p, '.card[data-module=signaux]')));
+  ok('L2 : ses modules, le prérequis et l’ancien module signalés', (await p.$$('.card[data-module=fibre]')).length === 1 && /Hors de votre parcours/.test(await text(p, '.card[data-module=analyse]')) && /Révision recommandée/.test(await text(p, '.card[data-module=signaux]')));
   await go(p, 'lecons/analyse/c2');
   ok('ancien module toujours consultable', /Thévenin et Norton/.test(await text(p, 'main h1')));
   await go(p, 'evaluations/final-analyse');
   ok('évaluation d’un ancien niveau refermée', /Hors de votre parcours/.test(await text(p, 'main h1')));
   await go(p, 'changer-parcours');
   ok('historique des parcours conservé', /Parcours choisi : Licence 1/.test(await text(p, 'main')) && /Licence 1 → Licence 2/.test(await text(p, 'main')));
+
+  console.log('\nInscription directe en L3, avec positionnement');
+  var d5 = await newPage(browser), l3 = d5.page;
+  await login(l3, 'direct-l3@exemple.org', 'Direct L3');
+  await waitHash(l3, '#/bienvenue');
+  await l3.check('input[name=track][value=l3]'); await l3.check('#placement-ask'); await l3.click('#track-ok');
+  await waitHash(l3, '#/evaluations');
+  ok('L3 choisi directement, puis orientation vers les tests de positionnement', (await profileOf('direct-l3@exemple.org')).space === 'l3' && /Tests de positionnement/.test(await text(l3, 'main')));
+  ok('L3 : évaluation ouverte sans les niveaux précédents', /^[0-9a-f-]{36}$/.test(await l3.evaluate(function () { return TCL.api.rpc('start_attempt', { p_assessment: 'final-numerique' }).then(function (r) { return r.attempt_id; }, function (e) { return e.message; }); })));
+  await go(l3, 'changer-parcours');
+  ok('changement de niveau proposé librement, Monde professionnel fermé', (await l3.$$('[data-move=preparatoire],[data-move=l1],[data-move=l2],[data-move=master]')).length === 4 && (await l3.$('[data-move=pro]')) === null);
+  await d5.ctx.close();
 
   console.log('\nAnciens comptes');
   var d3 = await newPage(browser), v1 = d3.page;
@@ -297,7 +316,7 @@ function rpcResult(p, name, args) { return p.evaluate(function (a) { return TCL.
   await S.db.db.query("update public.progress set data = $1, updated_at = now() where user_id = $2", [{ version: 1, updatedAt: '2026-11-01T00:00:00.000Z', lessons: { ip: { chapters: { c1: '2026-10-01T00:00:00.000Z' }, last: 'c1' } }, lab: {}, exercises: {}, activity: [], prefs: {} }, uid]);
   await v1.reload(); await waitHash(v1, '#/bienvenue');
   await v1.waitForSelector('input[name=track]', { timeout: 8000 });
-  ok('compte V1 sans parcours : sélection demandée, sans réinscription', (await v1.$$('input[name=track]')).length === 2);
+  ok('compte V1 sans parcours : sélection demandée, sans réinscription', (await v1.$$('input[name=track]')).length === 5);
   await chooseTrack(v1, 'l1');
   await go(v1, 'progression');
   ok('compte V1 : progression préservée', /Chapitres lus ?1 \/ \d+/.test(await text(v1, '.kpis')), await text(v1, '.kpis'));
@@ -389,7 +408,7 @@ function rpcResult(p, name, args) { return p.evaluate(function (a) { return TCL.
   await chooseTrack(mp, 'pro', 'pro-fibre');
   ok('demande professionnelle : compte en L1, aucun droit avant l’approbation', (await profileOf('mobile@exemple.org')).space === 'l1' && (await S.db.db.query("select pro_status from public.profiles p join auth.users u on u.id = p.id where u.email = 'mobile@exemple.org'")).rows[0].pro_status === 'pending');
   await go(mp, 'changer-parcours');
-  ok('demande professionnelle affichée en attente, niveaux supérieurs fermés', /en attente de validation/.test(await text(mp, '#pro-pending')) && (await mp.$('[data-move=master]')) === null);
+  ok('demande professionnelle affichée en attente, Monde professionnel fermé', /en attente de validation/.test(await text(mp, '#pro-pending')) && (await mp.$('[data-move=pro]')) === null && (await mp.$('[data-move=master]')) !== null);
   await go(a, 'admin'); await a.click('[data-tab=pro]'); await a.waitForSelector('#adm tr[data-id]', { timeout: 5000 });
   ok('administration : demande listée avec sa spécialisation', /mobile@exemple\.org/.test(await text(a, '#adm')) && /fibre/i.test(await text(a, '#adm')), await text(a, '#adm'));
   a.once('dialog', function (x) { x.accept(); });
@@ -454,6 +473,8 @@ function rpcResult(p, name, args) { return p.evaluate(function (a) { return TCL.
   await login(o, 'offline@exemple.org', 'Offline');
   await chooseTrack(o, 'l2');
   await o.waitForFunction(function () { var s = TCL.access.scope(), f = []; s.core.concat(s.prerequisites).forEach(function (id) { f = f.concat(TCL.content.filesOf(id)); }); return Promise.all(f.map(function (u) { return caches.match(u); })).then(function (r) { return r.every(Boolean); }); }, null, { timeout: 20000 });
+  // Choix direct de la L2 : la mise en cache se termine juste après l'inscription.
+  for (var w = 0; w < 40 && !(await cached()); w++) await o.waitForTimeout(250);
   ok('étudiant : le catalogue est disponible hors ligne', await cached());
   await c4.ctx.setOffline(true);
   await o.reload(); await o.waitForTimeout(1200);

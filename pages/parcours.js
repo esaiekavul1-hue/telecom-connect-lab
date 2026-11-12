@@ -51,6 +51,26 @@
     return '<li class="mod-row"><a href="#/competence/' + m.id + '">' + esc(c.title) + '</a>' + pill(m.status) + '<span class="mod-row__bar">' + U.progressBar(m.percent, 'Avancement : ' + c.title) + '</span></li>';
   }
 
+  /**
+   * Bases venant d'autres niveaux. Pour un niveau d'études : révisions recommandées, non bloquantes,
+   * avec les tests de positionnement qui les valident. Pour le Monde professionnel : bases exigées.
+   */
+  function revisions(scope, ctx) {
+    if (!scope.prerequisites.length) return '';
+    var lower = CUR.lowerLevelCompetencies(scope.track.space);
+    var todo = scope.prerequisites.filter(function (id) { return lower[id] && !ctx.validated[id]; });
+    var required = scope.prerequisites.filter(function (id) { return !lower[id]; });
+    var out = '';
+    if (todo.length) {
+      var tests = CUR.placements.filter(function (p) { return p.grants.some(function (g) { return todo.indexOf(g) >= 0; }); });
+      out += '<section class="box" id="revisions"><h2>Révisions recommandées</h2><p class="muted">Bases des niveaux précédents utiles à votre niveau. Elles ne bloquent ni vos cours ni vos évaluations.</p><ul class="mod-rows">' +
+        todo.map(function (id) { return moduleRow(MA.moduleMastery(id, ctx)); }).join('') + '</ul>' +
+        (tests.length ? '<p class="muted small">Vous les maîtrisez déjà ? Test de positionnement facultatif : ' + tests.map(function (p) { return '<a href="#/evaluations/' + p.id + '">' + esc(p.title.replace(/^Positionnement : /, '')) + '</a>'; }).join(' · ') + '</p>' : '') + '</section>';
+    }
+    if (required.length) out += '<section class="box"><h2>Bases à consolider</h2><p class="muted">Ces compétences sont exigées par votre parcours.</p><ul class="mod-rows">' + required.map(function (id) { return moduleRow(MA.moduleMastery(id, ctx)); }).join('') + '</ul></section>';
+    return out;
+  }
+
   function space(main, params) {
     var s = CUR.spaceById(params.space);
     if (!s) return P.notFound.render(main);
@@ -59,7 +79,7 @@
     var list = visibleCourses(st.courses);
     if (mine && t.specialization) list = list.filter(function (c) { return c.id === t.specialization; });
     var scope = TCL.access.scope();
-    var bases = mine && scope.prerequisites.length ? '<section class="box"><h2>Bases à consolider</h2><p class="muted">Ces compétences sont exigées par votre parcours.</p><ul class="mod-rows">' + scope.prerequisites.map(function (id) { return moduleRow(MA.moduleMastery(id, ctx)); }).join('') + '</ul></section>' : '';
+    var bases = mine ? revisions(scope, ctx) : '';
     var courses = list.map(function (c) {
       var planned = c.state.status === 'planned';
       return '<article class="course' + (planned ? ' course--planned' : '') + '"><header class="course__head"><h2>' + esc(c.title) + '</h2>' + pill(c.state.status) + '</header>' +
@@ -88,6 +108,7 @@
     else if (!TCL.access.inTrack(id)) action = '<p class="muted">Ce module est hors de votre parcours actuel : vos résultats restent consultables, mais son évaluation n’est pas ouverte.</p>';
     else if (off.status === 'ready') action = (m.ready ? '<p>Vous avez atteint les seuils conseillés.</p>' : '<p class="muted">Seuils conseillés non atteints : vous pouvez tout de même tenter l’évaluation.</p>') + '<a class="btn btn--primary" href="#/evaluations/' + fid + '">' + I('shield') + 'Passer l’évaluation</a>';
     else action = '<p class="muted">L’évaluation nécessite une connexion à votre compte et un service actif.</p>';
+    if (m.status !== 'validated' && m.revisions.length) action = '<p class="muted" id="revision-note">' + I('info') + ' Révision recommandée, non obligatoire : ' + m.revisions.map(function (p) { return '<a href="#/competence/' + p + '">' + esc(CUR.competencies[p].title) + '</a>'; }).join(', ') + '.</p>' + action;
     var weak = m.weak.length ? '<section class="box"><h2>À retravailler</h2><p class="muted">D’après vos exercices sans réussite à ce jour.</p><ul>' + m.weak.slice(0, 4).map(function (w) { return '<li>' + esc(w.skill) + ' (' + w.failed + ' exercice' + (w.failed > 1 ? 's' : '') + ')</li>'; }).join('') + '</ul><p><a class="btn btn--ghost btn--sm" href="#/defis/' + id + '">Refaire les exercices</a> <a class="btn btn--ghost btn--sm" href="#/assistant/' + id + '">' + I('sparkle') + 'Demander une explication</a></p></section>' : '';
     main.innerHTML = '<div class="container page">' + P.crumbs([{ label: 'Parcours', href: '#/parcours' }, { label: c.title }]) + P.moduleNav(id, null) +
       P.head(c.title, 'Suivez ces étapes, puis faites valider la compétence.', pill(m.status)) + P.officialNotice() +

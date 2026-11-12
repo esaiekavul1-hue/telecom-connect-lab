@@ -118,7 +118,7 @@
       c('m-cloud', 'Cloud et infrastructures', ['cloud']),
       c('m-iot', 'Systèmes connectés avancés', ['iot-projets'])
     ] },
-    { id: 'pro', title: 'Monde professionnel', rank: null, entry: [], icon: 'shield', text: 'Des parcours métiers orientés manipulation, installation, diagnostic et maintenance, accessibles par évaluation des prérequis.', placement: true, courses: [
+    { id: 'pro', title: 'Monde professionnel', rank: null, entry: [], icon: 'shield', text: 'Pour les professionnels des télécommunications : parcours métiers orientés manipulation, installation, diagnostic et maintenance, ouverts sur demande approuvée par l’administration.', placement: true, courses: [
       c('pro-reseaux', 'Technicien réseaux', ['ip', 'reseaux-info', 'sans-fil']),
       c('pro-fibre', 'Technicien fibre optique', ['fibre', 'qualite']),
       c('pro-admin', 'Administrateur systèmes et réseaux', ['systemes', 'reseaux-info', 'cloud', 'maintenance']),
@@ -190,10 +190,28 @@
     return out;
   }
 
+  /** Niveaux d'études (Préparatoire à Master), proposés dès l'inscription. */
+  function levels() { return spaces.filter(function (s) { return s.rank != null; }); }
+
   /**
-   * Règle de changement, identique à public.change_track : monter de niveau exige
-   * les compétences d'entrée ; redescendre reste libre. Le monde professionnel exige toutes les
-   * évaluations du plus haut niveau occupé (highest). directPro : inscrit en professionnel, accès libre.
+   * Compétences enseignées à un niveau inférieur à celui du parcours : prérequis recommandés,
+   * jamais bloquants (identique à public.start_attempt). Vide pour le Monde professionnel.
+   */
+  function lowerLevelCompetencies(space) {
+    var s = spaceById(space), out = {};
+    if (!s || s.rank == null) return out;
+    levels().forEach(function (l) {
+      if (l.rank >= s.rank) return;
+      var m = trackModules(l.id, null);
+      m.core.concat(m.prerequisites).forEach(function (c) { out[c] = 1; });
+    });
+    return out;
+  }
+
+  /**
+   * Règle de changement, identique à public.change_track : entre niveaux d'études, changement
+   * libre dans les deux sens. Le monde professionnel exige toutes les évaluations du plus haut
+   * niveau occupé (highest). directPro : professionnel approuvé, accès libre.
    */
   function checkMove(from, to, validated, directPro, highest) {
     var a = spaceById(from.space), b = spaceById(to.space);
@@ -204,13 +222,12 @@
     var upward = toPro || (b.rank != null && (!a || a.rank == null || b.rank > a.rank));
     var required = [];
     if (toPro) { var ref = highest || from, m = trackModules(ref.space, ref.specialization); required = m.core.concat(m.prerequisites); }
-    else if (upward) required = b.entry;
     var missing = required.filter(function (c) { return !validated[c]; });
     var help = placements.filter(function (p) { return p.grants.some(function (g) { return missing.indexOf(g) >= 0; }); });
     return { allowed: missing.length === 0, upward: upward, missing: missing, placements: help };
   }
 
   return { competencies: competencies, placements: placements, spaces: spaces, spaceById: spaceById, modulesOfSpace: modulesOfSpace,
-    specializations: specializations, courseById: courseById, trackKey: trackKey, trackLabel: trackLabel, trackCourses: trackCourses,
+    specializations: specializations, levels: levels, lowerLevelCompetencies: lowerLevelCompetencies, courseById: courseById, trackKey: trackKey, trackLabel: trackLabel, trackCourses: trackCourses,
     closure: closure, trackModules: trackModules, trackList: trackList, checkMove: checkMove };
 });

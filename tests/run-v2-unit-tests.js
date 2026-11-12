@@ -141,11 +141,10 @@ test('spécialisation : restreint au métier, avec ses prérequis', function () 
 test('fermeture des prérequis : chaque évaluation d’un parcours a ses prérequis dans ce parcours', function () {
   CUR.trackList().forEach(function (t) { t.competencies.forEach(function (c) { CUR.competencies[c].prerequisites.forEach(function (p) { assert.ok(t.competencies.indexOf(p) >= 0, t.key + ' : ' + p); }); }); });
 });
-test('changement : monter exige l’entrée ; descendre, non', function () {
-  var r = CUR.checkMove({ space: 'l1' }, { space: 'l2' }, { circuits: {} });
-  assert.strictEqual(r.allowed, false); assert.deepStrictEqual(r.missing, ['signaux']); assert.ok(r.placements.some(function (p) { return p.id === 'placement-bases'; }));
-  assert.strictEqual(CUR.checkMove({ space: 'l1' }, { space: 'l2' }, { circuits: {}, signaux: {} }).allowed, true);
-  assert.strictEqual(CUR.checkMove({ space: 'l3' }, { space: 'l1' }, {}).allowed, true);
+test('changement entre niveaux d’études : libre dans les deux sens', function () {
+  var lv = ['preparatoire', 'l1', 'l2', 'l3', 'master'];
+  lv.forEach(function (a) { lv.forEach(function (b) { if (a !== b) assert.strictEqual(CUR.checkMove({ space: a }, { space: b }, {}).allowed, true, a + ' → ' + b); }); });
+  assert.strictEqual(CUR.checkMove({ space: 'pro' }, { space: 'l1' }, {}).allowed, true);
   var l1 = CUR.trackModules('l1', null), all = {}; l1.core.concat(l1.prerequisites).forEach(function (c) { all[c] = {}; });
   var locked = CUR.checkMove({ space: 'l1' }, { space: 'pro' }, { circuits: {} });
   assert.strictEqual(locked.allowed, false); assert.strictEqual(locked.missing.length, Object.keys(all).length - 1);
@@ -154,7 +153,6 @@ test('changement : monter exige l’entrée ; descendre, non', function () {
   var pv = {}; CUR.trackModules('preparatoire', null).core.forEach(function (c) { pv[c] = {}; });
   assert.strictEqual(CUR.checkMove({ space: 'preparatoire' }, { space: 'pro' }, pv, false, { space: 'l1' }).allowed, false, 'descendre ne réduit pas l’exigence');
   ['preparatoire', 'l1', 'l2', 'l3', 'master'].forEach(function (x) { assert.strictEqual(CUR.checkMove({ space: 'pro' }, { space: x }, {}, true).allowed, true, x); });
-  assert.strictEqual(CUR.checkMove({ space: 'pro' }, { space: 'l1' }, {}).allowed, false);
   assert.strictEqual(CUR.checkMove({ space: 'l1' }, { space: 'l1' }, {}).same, true);
 });
 test('chaque niveau reste atteignable : l’entrée vient du niveau précédent ou d’un positionnement', function () {
@@ -166,6 +164,28 @@ test('chaque niveau reste atteignable : l’entrée vient du niveau précédent 
       assert.ok(previous.indexOf(c) >= 0 || viaPlacement, s + ' : ' + c);
     });
   });
+});
+
+test('niveaux proposés à l’inscription : Préparatoire à Master, sans le Monde professionnel', function () {
+  assert.deepStrictEqual(CUR.levels().map(function (s) { return s.id; }), ['preparatoire', 'l1', 'l2', 'l3', 'master']);
+});
+test('révisions recommandées : bases des niveaux inférieurs, jamais pour le Monde professionnel', function () {
+  assert.deepStrictEqual(CUR.lowerLevelCompetencies('preparatoire'), {});
+  assert.deepStrictEqual(CUR.lowerLevelCompetencies('pro'), {});
+  var l3 = CUR.lowerLevelCompetencies('l3');
+  ['modulation', 'chaine', 'signaux', 'ip', 'circuits'].forEach(function (c) { assert.ok(l3[c], c); });
+  assert.ok(!l3.numerique && !l3.mobiles, 'le cœur du niveau reste exigé');
+  assert.ok(!CUR.lowerLevelCompetencies('l2')['ondes-em'], 'ondes-em est propre à la L2');
+});
+test('maîtrise : un prérequis d’un niveau inférieur est recommandé, pas bloquant', function () {
+  var c = ctx(); c.content.numerique = { chapters: ['c1'], missions: [], exercises: [] };
+  var locked = MA.moduleMastery('numerique', c);
+  assert.strictEqual(locked.status, 'locked');
+  c.optional = CUR.lowerLevelCompetencies('l3');
+  var m = MA.moduleMastery('numerique', c);
+  assert.notStrictEqual(m.status, 'locked'); assert.deepStrictEqual(m.prerequisitesMissing, []); assert.deepStrictEqual(m.revisions.sort(), ['chaine', 'modulation']);
+  c.validated = { modulation: {} };
+  assert.deepStrictEqual(MA.moduleMastery('numerique', c).revisions, ['chaine']);
 });
 
 console.log('\n' + passed + ' tests réussis, ' + failed + ' échec(s).');

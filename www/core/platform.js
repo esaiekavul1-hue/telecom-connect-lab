@@ -88,15 +88,15 @@
 
   /*
    * Choix fait avant l'activation du service : transmis une seule fois au profil, sans redemander.
-   * Le premier parcours est Préparatoire ou L1 ; un ancien choix plus élevé démarre en L1
-   * (Préparatoire pour le Monde professionnel, qui devient une demande à l'administration).
+   * Le niveau d'études choisi est conservé ; un ancien choix « Monde professionnel » démarre
+   * en Préparatoire et devient une demande à l'administration.
    */
-  var INITIAL = ['preparatoire', 'l1'];
   function pushPendingTrack() {
     var pref = (TCL.store.get().prefs || {}).track;
     if (!state.profile || state.profile.space || !pref) return null;
     var pro = !!pref.pro || pref.space === 'pro';
-    var space = INITIAL.indexOf(pref.space) >= 0 ? pref.space : pref.space === 'pro' ? 'preparatoire' : 'l1';
+    var lv = TCL.curriculum.spaceById(pref.space);
+    var space = lv && lv.rank != null ? pref.space : pref.space === 'pro' ? 'preparatoire' : 'l1';
     return TCL.api.rpc('choose_initial_track', { p_space: space, p_specialization: null }).then(function (r) {
       state.profile.space = r.space; state.profile.specialization = r.specialization; saveCache();
       if (!pro) return null;
@@ -167,7 +167,10 @@
   function overrides() { return state.settings.curriculum_overrides || {}; }
 
   function ctx() {
-    return { state: TCL.store.get(), content: content(), validated: state.validated, curriculum: TCL.curriculum, thresholds: overrides().thresholds, failedAttempts: failedAttempts() };
+    // optional : prérequis d'un niveau inférieur au parcours, recommandés mais non bloquants (comme le serveur).
+    var t = TCL.access && TCL.access.track ? TCL.access.track() : null;
+    var optional = t && t.state === 'set' ? TCL.curriculum.lowerLevelCompetencies(t.space) : null;
+    return { state: TCL.store.get(), content: content(), validated: state.validated, curriculum: TCL.curriculum, thresholds: overrides().thresholds, failedAttempts: failedAttempts(), optional: optional };
   }
 
   TCL.official = {

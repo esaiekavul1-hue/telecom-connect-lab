@@ -24,7 +24,7 @@ Branche : `v2`. Point de retour de la V1 : tag `v1-baseline`. Rien n'a été pub
 | Qui voit quoi ? | `core/access.js` : `visitor` (démonstration), `student` (parcours du compte), `open` (aucune connexion configurée : tout reste local, comme en V1). |
 | Où adapter un parcours ? | `core/curriculum.js` : cours, compétences d'entrée (`entry`). Puis `npm run build` et réexécution du fichier de seed : le serveur reçoit la même liste. |
 | Quand le parcours est-il demandé ? | Seulement si le serveur confirme son absence. Coupure, panne ou profil en cours de chargement : jamais. |
-| Écriture du parcours | `choose_initial_track` (une fois, Préparatoire ou L1), `change_track` (entrée vérifiée). Écriture directe refusée. |
+| Écriture du parcours | `choose_initial_track` (une fois, un niveau d'études de Préparatoire à Master), `change_track` (libre entre niveaux d'études ; Monde professionnel sur approbation ou évaluations). Écriture directe refusée. |
 | Monde professionnel | Inscription : demande (`request_pro`), examinée dans Administration > Accès professionnels (`admin_decide_pro`). Approuvé : tous les niveaux librement. Étudiant : après toutes les évaluations du plus haut niveau occupé. Anciens inscrits directs : droits conservés, statut « à vérifier ». |
 | Corrigés et mémorisation | Corrigé détaillé d'une évaluation finale après réussite seulement ; jamais pour un positionnement. Nouvelle tentative : questions inédites d'abord, autre version des questions déjà vues, choix de QCM mélangés. Échecs répétés : attente de 30 min, puis 2 h, puis 24 h. |
 | Service non activé | Le choix est conservé avec la progression du compte, puis transmis au profil dès l'activation, sans redemander. |
@@ -64,7 +64,7 @@ Les pages de cours restent librement accessibles : les prérequis ferment l'éva
 - Sessions conservées lors des coupures et des pannes du service.
 - Six espaces, cours, statuts, seuils configurables.
 - Évaluations : QCM, numérique, texte, dépannage par QCM, variantes de paramètres, chronomètre serveur, tentatives limitées, délai croissant, reprise, corrigé après réussite, remédiation, positionnement.
-- Accès : premier parcours Préparatoire ou L1, demandes professionnelles approuvées par l'administration.
+- Accès : inscription directe à son niveau d'études (Préparatoire à Master), changement libre sans perte de résultats, révisions recommandées et test de positionnement facultatif ; demandes professionnelles approuvées par l'administration.
 - 40 modules dans les quatre domaines : leçon, laboratoire, exercices, évaluation serveur (`docs/CATALOGUE.md`).
 - Assistant : présenté publiquement, interface et contexte de leçon ou de laboratoire prêts, indisponibilité affichée tant qu'aucun fournisseur n'est branché.
 - Mon espace, attestation interne, administration (comptes, évaluations, supervision, seuils, IA, incidents, audit).
@@ -85,6 +85,8 @@ Dans cet ordre, sur le projet Supabase existant :
    - Nouveau projet : `20261108000100_v2_core.sql`, `20261108000200_v2_tracks.sql`, `20261110000100_v2_pro_access.sql`, `supabase/seed/assessments.generated.sql`, puis `20261110000200_v2_access_hardening.sql`.
    - Ne jamais rejouer seule une migration 1 à 3 : elle rétablirait d'anciennes règles. En cas de reprise, relancer ensuite `20261110000200_v2_access_hardening.sql`.
    - Annulation de la sécurisation : `supabase/rollback/20261110000200_v2_access_hardening.down.sql` (aucune donnée supprimée).
+   - Choix du niveau d'études : `supabase/migrations/20261111000100_v2_level_choice.sql`, après la sécurisation et chaque fois que celle-ci est rejouée. Il remplace trois fonctions seulement : inscription directe de Préparatoire à Master, changement libre entre niveaux d'études, prérequis des niveaux inférieurs recommandés au lieu de bloquants. Le Monde professionnel reste soumis à l'approbation de l'administration. Annulation : `supabase/rollback/20261111000100_v2_level_choice.down.sql`, à exécuter avant toute annulation de la sécurisation.
+   - Contrôle : `select pg_get_functiondef('public.choose_initial_track(text,text)'::regprocedure) like '%rank is not null%';` doit renvoyer `true`.
 3. Se désigner administrateur :
    `update public.profiles set role = 'admin' where id = (select id from auth.users where email = 'VOTRE_EMAIL');`
 4. Assistant IA, offre gratuite Gemini uniquement : Netlify Function `netlify/functions/ai-tutor.mts` (même logique que `supabase/functions/ai-tutor/`), servie par le site sur `/functions/v1/ai-tutor`. Variables d'environnement Netlify : `GEMINI_API_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (facultatives : `ALLOWED_ORIGINS` pour un domaine personnalisé, `AI_MODEL`, `AI_FALLBACK_MODEL`). Le projet Google ne doit avoir aucune facturation. Une réponse doit arriver en moins de 9 s (limite Netlify de 10 s) ; sinon la demande est rendue à l'étudiant.

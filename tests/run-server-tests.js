@@ -352,11 +352,9 @@ async function rejects(p, re) {
     await rejects(L.rpc(t1, 'change_track', { p_space: 'preparatoire' }), /évaluation en cours/);
     await L.rpc(t1, 'submit_attempt', { p_attempt: t.attempt_id });
   });
-  await test('monter de niveau exige les compétences d’entrée', async function () {
-    await rejects(L.rpc(t1, 'change_track', { p_space: 'l2' }), /à valider avant ce parcours : circuits, signaux/);
-    assert.strictEqual((await profile(t1)).space, 'l1');
-    await validate(t1, ['circuits', 'signaux']);
+  await test('changer de niveau d’études : libre, sans compétences d’entrée', async function () {
     assert.strictEqual((await L.rpc(t1, 'change_track', { p_space: 'l2' })).space, 'l2');
+    await validate(t1, ['circuits', 'signaux']);
   });
   await test('changer ne supprime ni validation ni tentative', async function () {
     var v = await L.db.query('select count(*)::int n from public.competency_validations where user_id = $1', [t1]);
@@ -372,7 +370,7 @@ async function rejects(p, re) {
     assert.strictEqual((await profile(t1)).space, 'preparatoire', 'descendre ne réduit pas l’exigence');
     await validate(t1, (await L.db.query("select competency from private.track_competencies where track_key = 'l2' and competency not in ('circuits','signaux','binaire','ordinateur','iot-intro')")).rows.map(function (x) { return x.competency; }));
     assert.strictEqual((await L.rpc(t1, 'change_track', { p_space: 'pro', p_specialization: 'pro-reseaux' })).specialization, 'pro-reseaux');
-    await rejects(L.rpc(t1, 'change_track', { p_space: 'master' }), /à valider avant ce parcours/);
+    assert.strictEqual((await L.rpc(t1, 'change_track', { p_space: 'master' })).space, 'master', 'retour vers un niveau d’études libre');
   });
   await test('professionnel approuvé : tous les niveaux librement, sans validation', async function () {
     var dp = await withTrack(await L.createUser('direct-pro@exemple.org'));
@@ -400,16 +398,87 @@ async function rejects(p, re) {
     }
   });
 
-  console.log('\nSécurisation des accès');
+  console.log('\nChoix du niveau d’études');
   var mig4 = fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261110000200_v2_access_hardening.sql'), 'utf8');
-  async function prof4(id) { return (await L.db.query('select space, specialization, pro_status from public.profiles where id = $1', [id])).rows[0]; }
-  await test('premier parcours : Préparatoire ou Licence 1 uniquement', async function () {
-    var f = await L.createUser('first@exemple.org');
-    for (var sp3 of ['l2', 'l3', 'master', 'pro']) await rejects(L.rpc(f, 'choose_initial_track', { p_space: sp3 }), /premier parcours est Préparatoire ou Licence 1/);
-    await rejects(L.rpc(f, 'choose_initial_track', { p_space: 'pro', p_specialization: 'pro-fibre' }), /premier parcours/);
-    assert.strictEqual((await prof4(f)).space, null);
-    assert.strictEqual((await L.rpc(f, 'choose_initial_track', { p_space: 'preparatoire' })).space, 'preparatoire');
+  var mig5 = fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261111000100_v2_level_choice.sql'), 'utf8');
+  var down5 = fs.readFileSync(path.join(__dirname, '../supabase/rollback/20261111000100_v2_level_choice.down.sql'), 'utf8');
+  /** Rejoue la sécurisation : la migration 5 doit toujours être réappliquée après elle. */
+  async function replay4() { await L.db.exec(mig4); await L.db.exec(mig5); }
+  await test('inscription : Préparatoire, L1, L2, L3 et Master proposés à tous', async function () {
+    for (var lv of ['preparatoire', 'l1', 'l2', 'l3', 'master']) {
+      var u = await L.createUser('niveau-' + lv + '@exemple.org');
+      assert.strictEqual((await L.rpc(u, 'choose_initial_track', { p_space: lv })).space, lv);
+      assert.deepStrictEqual(await history(u), [{ from_space: null, to_space: lv, kind: 'initial' }]);
+    }
   });
+  await test('inscription : le Monde professionnel reste distinct, sur demande approuvée', async function () {
+    var f = await L.createUser('first@exemple.org');
+    await rejects(L.rpc(f, 'choose_initial_track', { p_space: 'pro' }), /Monde professionnel s'ouvre par une demande approuvée/);
+    await rejects(L.rpc(f, 'choose_initial_track', { p_space: 'pro', p_specialization: 'pro-fibre' }), /demande approuvée/);
+    assert.strictEqual((await profile(f)).space, null);
+  });
+  await test('commencer en L3 : évaluations ouvertes sans les niveaux précédents', async function () {
+    var u = await L.createUser('direct-l3@exemple.org');
+    await L.rpc(u, 'choose_initial_track', { p_space: 'l3' });
+    var t = await L.rpc(u, 'start_attempt', { p_assessment: 'final-numerique' });
+    assert.ok(t.attempt_id, 'prérequis modulation et chaîne (L2) recommandés, non bloquants');
+    await L.rpc(u, 'submit_attempt', { p_attempt: t.attempt_id });
+    assert.strictEqual((await L.db.query('select count(*)::int n from public.competency_validations where user_id = $1', [u])).rows[0].n, 0, 'aucune validation offerte');
+    await rejects(L.rpc(u, 'start_attempt', { p_assessment: 'final-5g' }), /ne fait pas partie de votre parcours/);
+    var p = await L.rpc(u, 'start_attempt', { p_assessment: 'placement-transmission' });
+    assert.ok(p.attempt_id, 'test de positionnement facultatif disponible');
+    await L.rpc(u, 'submit_attempt', { p_attempt: p.attempt_id });
+  });
+  await test('commencer en Master : évaluations du niveau ouvertes directement', async function () {
+    var u = await L.createUser('direct-master@exemple.org');
+    await L.rpc(u, 'choose_initial_track', { p_space: 'master' });
+    var t = await L.rpc(u, 'start_attempt', { p_assessment: 'final-5g' });
+    assert.ok(t.attempt_id);
+    await L.rpc(u, 'submit_attempt', { p_attempt: t.attempt_id });
+  });
+  await test('un prérequis du même niveau reste exigé', async function () {
+    var u = await L.createUser('ordre-l2@exemple.org');
+    await L.rpc(u, 'choose_initial_track', { p_space: 'l2' });
+    await rejects(L.rpc(u, 'start_attempt', { p_assessment: 'final-antennes' }), /Prérequis non validés : ondes-em/);
+  });
+  await test('changer de niveau conserve résultats, tentatives et progression', async function () {
+    var u = await L.createUser('change-niveau@exemple.org');
+    await L.rpc(u, 'choose_initial_track', { p_space: 'l3' });
+    await validate(u, ['modulation']);
+    var t = await L.rpc(u, 'start_attempt', { p_assessment: 'final-numerique' }); await L.rpc(u, 'submit_attempt', { p_attempt: t.attempt_id });
+    await L.db.query('insert into public.progress (user_id, data) values ($1, $2)', [u, existingProgress]);
+    for (var lv of ['l1', 'master', 'preparatoire', 'l3']) assert.strictEqual((await L.rpc(u, 'change_track', { p_space: lv })).space, lv);
+    var r = (await L.db.query('select (select count(*)::int from public.competency_validations where user_id = $1) v, (select count(*)::int from public.attempts where user_id = $1) a, (select data from public.progress where user_id = $1) d', [u])).rows[0];
+    assert.strictEqual(r.v, 1); assert.strictEqual(r.a, 1); assert.deepStrictEqual(r.d, existingProgress);
+    assert.deepStrictEqual((await history(u)).map(function (h) { return h.to_space; }), ['l3', 'l1', 'master', 'preparatoire', 'l3']);
+  });
+  await test('étudiant non approuvé : Monde professionnel toujours fermé', async function () {
+    var u = await L.createUser('sans-pro@exemple.org');
+    await L.rpc(u, 'choose_initial_track', { p_space: 'master' });
+    await rejects(L.rpc(u, 'change_track', { p_space: 'pro', p_specialization: 'pro-reseaux' }), /à valider avant ce parcours/);
+    await L.rpc(u, 'request_pro', { p_specialization: 'pro-reseaux' });
+    await rejects(L.rpc(u, 'change_track', { p_space: 'pro', p_specialization: 'pro-reseaux' }), /à valider avant ce parcours/);
+  });
+  await test('la migration 5 se rejoue, puis s’annule en rétablissant les règles précédentes, sans perte', async function () {
+    await L.db.exec(mig5); await L.db.exec(mig5);
+    var counts = 'select (select count(*)::int from public.competency_validations) v, (select count(*)::int from public.attempts) a, (select count(*)::int from public.profiles where space is not null) p, (select count(*)::int from public.track_history) h';
+    var before = (await L.db.query(counts)).rows[0];
+    await L.db.exec(down5);
+    assert.deepStrictEqual((await L.db.query(counts)).rows[0], before);
+    var u = await L.createUser('annulation5@exemple.org');
+    await rejects(L.rpc(u, 'choose_initial_track', { p_space: 'l3' }), /premier parcours est Préparatoire ou Licence 1/);
+    await rejects(L.rpc(null, 'start_attempt', { p_assessment: 'final-circuits' }, 'anon'), /permission denied/);
+    await L.db.exec(mig5);
+    assert.strictEqual((await L.rpc(u, 'choose_initial_track', { p_space: 'l3' })).space, 'l3');
+  });
+  await test('droits : fonctions fermées aux visiteurs anonymes', async function () {
+    await rejects(L.rpc(null, 'choose_initial_track', { p_space: 'l3' }, 'anon'), /permission denied/);
+    await rejects(L.rpc(null, 'change_track', { p_space: 'l3' }, 'anon'), /permission denied/);
+    await rejects(L.rpc(null, 'start_attempt', { p_assessment: 'final-circuits' }, 'anon'), /permission denied/);
+  });
+
+  console.log('\nSécurisation des accès');
+  async function prof4(id) { return (await L.db.query('select space, specialization, pro_status from public.profiles where id = $1', [id])).rows[0]; }
   await test('seul le nom d’affichage reste modifiable par l’étudiant', async function () {
     var cols = (await L.db.query("select column_name c from information_schema.column_privileges where grantee = 'authenticated' and table_name = 'profiles' and privilege_type = 'UPDATE'")).rows.map(function (x) { return x.c; });
     assert.deepStrictEqual(cols, ['display_name']);
@@ -421,7 +490,6 @@ async function rejects(p, re) {
     var r = await L.rpc(p1, 'request_pro', { p_specialization: 'pro-reseaux', p_message: '  Technicien réseau depuis 6 ans  ' });
     assert.strictEqual(r.pro_status, 'pending');
     assert.deepStrictEqual(await prof4(p1), { space: 'l1', specialization: null, pro_status: 'pending' });
-    await rejects(L.rpc(p1, 'change_track', { p_space: 'master' }), /à valider avant ce parcours/);
     await rejects(L.rpc(p1, 'change_track', { p_space: 'pro', p_specialization: 'pro-reseaux' }), /à valider avant ce parcours/);
     await rejects(L.as(p1, 'authenticated', function (tx) { return tx.query("update public.profiles set pro_status = 'approved' where id = $1", [p1]); }), /permission denied/);
     await rejects(L.rpc(p1, 'request_pro', { p_specialization: 'l2' }), /Parcours inconnu/);
@@ -458,7 +526,7 @@ async function rejects(p, re) {
     await L.db.query("update public.profiles set space = 'pro', pro_status = null where id = $1", [old]);
     await L.db.query("update public.track_history set to_space = 'pro' where user_id = $1 and kind = 'initial'", [old]);
     await validate(old, ['circuits']);
-    await L.db.exec(mig4);
+    await replay4();
     assert.strictEqual((await prof4(old)).pro_status, 'legacy');
     assert.strictEqual((await prof4(p1)).pro_status, 'approved', 'rejouer la migration ne change aucune décision');
     assert.strictEqual((await L.rpc(old, 'change_track', { p_space: 'master' })).space, 'master');
@@ -471,8 +539,9 @@ async function rejects(p, re) {
     assert.deepStrictEqual(await prof4(old), { space: 'l1', specialization: null, pro_status: 'rejected' });
     var after = (await L.db.query('select (select count(*)::int from public.competency_validations where user_id = $1) v, (select count(*)::int from public.track_history where user_id = $1) h', [old])).rows[0];
     assert.strictEqual(after.v, before.v); assert.strictEqual(after.h, before.h + 1);
-    await rejects(L.rpc(old, 'change_track', { p_space: 'master' }), /à valider avant ce parcours/);
-    await L.db.exec(mig4);
+    await rejects(L.rpc(old, 'change_track', { p_space: 'pro' }), /à valider avant ce parcours/);
+    assert.strictEqual((await L.rpc(old, 'change_track', { p_space: 'master' })).space, 'master', 'niveaux d’études libres');
+    await replay4();
     assert.strictEqual((await prof4(old)).pro_status, 'rejected');
   });
   var vv = await L.createUser('variantes@exemple.org');
@@ -527,7 +596,8 @@ async function rejects(p, re) {
 
   console.log('\nRéversibilité');
   await test('la sécurisation se rejoue puis s’annule sans perte', async function () {
-    await L.db.exec(mig4);
+    await replay4();
+    await L.db.exec(down5);
     var counts = 'select (select count(*)::int from public.competency_validations) v, (select count(*)::int from public.attempts) a, (select count(*)::int from public.profiles where pro_status is not null) p';
     var before = (await L.db.query(counts)).rows[0];
     await L.db.exec(fs.readFileSync(path.join(__dirname, '../supabase/rollback/20261110000200_v2_access_hardening.down.sql'), 'utf8'));

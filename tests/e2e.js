@@ -282,7 +282,7 @@ async function suiteB(browser) {
   ok('B6 code incorrect refusé avec message, aucune connexion', /Code incorrect ou expiré/.test(await text(p, '#code-msg')) && /Connexion/.test(await text(p, '#nav-auth')));
   await p.fill('#f-code', mail.code); await p.click('#code-form button[type=submit]');
   await p.waitForSelector('#track-form', { timeout: 5000 });
-  ok('B6b compte neuf sans parcours : choix demandé', (await p.$$('input[name=track]')).length === 2);
+  ok('B6b compte neuf sans parcours : choix demandé', (await p.$$('input[name=track]')).length === 5);
   await p.check('input[name=track][value=l1]'); await p.click('#track-ok');
   await p.waitForFunction(function () { return location.hash === '#/mon-espace'; }, null, { timeout: 5000 });
   await go(p, 'compte'); await p.waitForSelector('.profile', { timeout: 5000 });

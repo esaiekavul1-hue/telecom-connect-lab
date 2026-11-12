@@ -33,6 +33,7 @@ async function create(options) {
   await db.exec(require('./generate-assessments.js').sql(require('./generate-assessments.js').assessments()));
   // Ordre réel du projet : la sécurisation s'applique sur une base déjà remplie.
   await db.exec(fs.readFileSync(path.join(ROOT, 'supabase/migrations/20261110000200_v2_access_hardening.sql'), 'utf8'));
+  await db.exec(fs.readFileSync(path.join(ROOT, 'supabase/migrations/20261111000100_v2_level_choice.sql'), 'utf8'));
 
   /** Exécute une requête avec l'identité d'un utilisateur, comme le ferait l'API. */
   async function as(userId, role, fn) {

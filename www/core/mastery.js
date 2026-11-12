@@ -29,7 +29,14 @@
   function missingPrerequisites(id, ctx) {
     var c = ctx.curriculum.competencies[id];
     if (!c) return [];
-    return c.prerequisites.filter(function (p) { return !ctx.validated[p]; });
+    return c.prerequisites.filter(function (p) { return !ctx.validated[p] && !(ctx.optional && ctx.optional[p]); });
+  }
+
+  /** Prérequis d'un niveau inférieur non validés : révisions recommandées, sans blocage. */
+  function recommendedRevisions(id, ctx) {
+    var c = ctx.curriculum.competencies[id];
+    if (!c || !ctx.optional) return [];
+    return c.prerequisites.filter(function (p) { return !ctx.validated[p] && ctx.optional[p]; });
   }
 
   /** Compétences à retravailler : exercices tentés mais jamais réussis, regroupés. */
@@ -62,7 +69,7 @@
     var missing = missingPrerequisites(id, ctx);
     var validated = ctx.validated[id] || null;
     var status = validated ? 'validated' : missing.length ? 'locked' : ready ? 'ready' : started ? 'in_progress' : 'available';
-    return { id: id, status: status, validated: validated, prerequisitesMissing: missing, ready: ready, started: started, steps: steps, weak: weakSkills(id, ctx),
+    return { id: id, status: status, validated: validated, prerequisitesMissing: missing, revisions: recommendedRevisions(id, ctx), ready: ready, started: started, steps: steps, weak: weakSkills(id, ctx),
       percent: validated ? 100 : Math.round((Math.min(lessonPct, t.lesson) / t.lesson + Math.min(exercisePct, t.exercises) / t.exercises + Math.min(labPct, t.lab) / t.lab) / 3 * 90) };
   }
 
@@ -108,5 +115,5 @@
     return out.slice(0, limit || 4);
   }
 
-  return { DEFAULTS: DEFAULTS, moduleMastery: moduleMastery, courseState: courseState, spaceState: spaceState, weakSkills: weakSkills, recommendations: recommendations, missingPrerequisites: missingPrerequisites };
+  return { DEFAULTS: DEFAULTS, moduleMastery: moduleMastery, courseState: courseState, spaceState: spaceState, weakSkills: weakSkills, recommendations: recommendations, missingPrerequisites: missingPrerequisites, recommendedRevisions: recommendedRevisions };
 });

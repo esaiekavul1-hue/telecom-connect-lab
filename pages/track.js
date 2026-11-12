@@ -1,18 +1,26 @@
 /*
  * TELECOM CONNECT LAB 2.0 — Choix et évolution du parcours.
- * Le choix initial est demandé une seule fois : Préparatoire ou Licence 1, avec une
- * demande d'accès professionnel facultative, examinée par l'administration.
+ * Le choix initial est demandé une seule fois : le niveau d'études réel (Préparatoire à Master),
+ * avec une demande d'accès professionnel facultative, examinée par l'administration.
  * Les changements sont vérifiés par le serveur et ne suppriment aucun résultat.
  */
 (function (root) {
   'use strict';
   var TCL = root.TCL;
   var U = TCL.util, I = TCL.icon, esc = U.esc, P = TCL.pages, O = TCL.official, CUR = TCL.curriculum, A = TCL.access;
-  var INITIAL = ['preparatoire', 'l1'];
-
+  /** Un cours est disponible si tous ses modules sont déclarés complets au catalogue (leçon, TP, exercices). */
+  function courseReady(c) {
+    return c.modules.length > 0 && c.modules.every(function (id) { var m = TCL.registry.byId(id); return m && m.parts.lesson && m.parts.lab && m.parts.exercises; });
+  }
+  function levelInfo(s) { return { live: s.courses.filter(courseReady).length, total: s.courses.length }; }
   function availability(s) {
-    var live = s.courses.filter(function (c) { return c.modules.length; }).length;
-    return live ? live + ' cours disponibles sur ' + s.courses.length : 'Contenus en cours de développement';
+    var n = levelInfo(s);
+    if (!n.live) return 'Cours pas encore disponibles pour ce niveau';
+    return n.live === n.total ? n.total + ' cours disponibles' : n.live + ' cours disponibles sur ' + n.total + ' · les autres sont en préparation';
+  }
+  function soonBadge(s) {
+    var n = levelInfo(s);
+    return n.live === n.total ? '' : ' <span class="pill pill--plan">' + I('clock') + (n.live ? 'Cours en partie disponibles' : 'Bientôt disponible') + '</span>';
   }
   function title(id) { return (CUR.competencies[id] || {}).title || id; }
 
@@ -30,22 +38,30 @@
       main.innerHTML = '<div class="container page page--narrow"><p class="loading" id="track-loading" role="status"><span class="spinner" aria-hidden="true"></span>Chargement de votre profil…</p></div>';
       return;
     }
-    var options = CUR.spaces.filter(function (s) { return INITIAL.indexOf(s.id) >= 0; }).map(function (s) {
-      return '<label class="track-option"><input type="radio" name="track" value="' + s.id + '"><span class="track-option__body">' + I(s.icon) + '<span><strong>' + esc(s.title) + '</strong><span class="track-option__text">' + esc(s.text) + '</span><span class="track-option__meta">' + esc(availability(s)) + '</span></span></span></label>';
+    var options = CUR.levels().map(function (s) {
+      return '<label class="track-option"><input type="radio" name="track" value="' + s.id + '"><span class="track-option__body">' + I(s.icon) + '<span><strong>' + esc(s.title) + soonBadge(s) + '</strong><span class="track-option__text">' + esc(s.text) + '</span><span class="track-option__meta">' + esc(availability(s)) + '</span></span></span></label>';
     }).join('');
     main.innerHTML = '<div class="container page page--narrow">' +
-      P.head('Bienvenue' + (u.name ? ', ' + u.name : ''), 'Choisissez votre point de départ : votre espace s’adaptera à votre niveau. Ce choix est lié à votre compte et ne vous sera plus demandé.') +
-      '<form id="track-form" novalidate><fieldset class="track-options"><legend class="sr-only">Votre parcours</legend>' + options + '</fieldset>' +
-      '<div class="box pro-ask"><label class="check"><input type="checkbox" id="pro-ask"> Je suis un professionnel des télécommunications</label>' +
+      P.head('Bienvenue' + (u.name ? ', ' + u.name : ''), 'Choisissez votre niveau d’études actuel : vous commencez directement à ce niveau, sans devoir terminer les précédents. Vous pourrez en changer à tout moment, sans perdre vos résultats.') +
+      '<form id="track-form" novalidate><fieldset class="track-options"><legend class="h-sub">Votre niveau d’études</legend>' + options + '</fieldset>' +
+      '<div class="box" id="placement-box" hidden><label class="check"><input type="checkbox" id="placement-ask"> Passer d’abord un test de positionnement (facultatif)</label>' +
+      '<p class="muted small">Il repère les bases des niveaux précédents que vous maîtrisez déjà. Sans ce test, vous commencez directement : les bases utiles vous seront proposées comme révisions recommandées.</p></div>' +
+      '<div class="box pro-ask"><h2 class="h-sub">Parcours professionnel</h2><label class="check"><input type="checkbox" id="pro-ask"> Je suis un professionnel des télécommunications</label>' +
       '<div id="pro-box" hidden><p class="muted small">L’administration examinera votre demande d’accès au Monde professionnel. En attendant, vous commencez dans le parcours choisi ci-dessus.</p>' +
       '<div class="control"><label for="spec">Spécialisation souhaitée</label><select id="spec">' + specOptions('') + '</select></div>' +
       '<div class="control"><label for="pro-msg">Votre expérience (facultatif)</label><textarea id="pro-msg" rows="3" maxlength="300" placeholder="Métier, années d’expérience, équipements maîtrisés…"></textarea></div></div></div>' +
-      '<p class="muted note">Les niveaux supérieurs s’ouvrent ensuite depuis « Mon parcours », par les évaluations ou les tests de positionnement. Vos résultats seront toujours conservés.</p>' +
+      '<p class="muted note">Un niveau signalé « Bientôt disponible » peut être choisi : ses cours apparaîtront dès leur publication. Vos résultats sont toujours conservés.</p>' +
       '<p class="field-error" id="track-err" role="alert"></p><button type="submit" class="btn btn--primary btn--lg btn--block" id="track-ok" disabled>' + I('check') + 'Confirmer mon parcours</button></form></div>';
     var form = U.qs('#track-form', main), ok = U.qs('#track-ok', main), err = U.qs('#track-err', main), proAsk = U.qs('#pro-ask', main), proBox = U.qs('#pro-box', main);
+    var placementBox = U.qs('#placement-box', main), placementAsk = U.qs('#placement-ask', main);
     function chosen() { return (U.qs('input[name=track]:checked', form) || {}).value; }
     U.qsa('input[name=track]', form).forEach(function (r) {
-      r.addEventListener('change', function () { ok.disabled = false; err.textContent = ''; });
+      r.addEventListener('change', function () {
+        ok.disabled = false; err.textContent = '';
+        // Le positionnement porte sur les niveaux précédents : rien à positionner en Préparatoire.
+        placementBox.hidden = !(CUR.spaceById(chosen()).rank >= 1);
+        if (placementBox.hidden) placementAsk.checked = false;
+      });
     });
     proAsk.addEventListener('change', function () { proBox.hidden = !proAsk.checked; });
     form.addEventListener('submit', function (e) {
@@ -56,7 +72,9 @@
       ok.disabled = true; err.textContent = '';
       saveInitial(space, pro).then(function () {
         U.toast('Parcours enregistré : ' + CUR.trackLabel(space, null) + (pro ? '. Demande d’accès professionnel transmise.' : ''), 'success');
-        if (root.location.hash === '#/bienvenue') root.location.hash = '#/mon-espace';
+        // Le profil rafraîchi peut déjà avoir quitté la page d'accueil : le positionnement demandé passe avant.
+        if (placementAsk.checked) root.location.hash = '#/evaluations';
+        else if (root.location.hash === '#/bienvenue') root.location.hash = '#/mon-espace';
       }).catch(function (ex) {
         if (ex && ex.hint === 'already_chosen') { O.refresh().then(function () { root.location.hash = '#/mon-espace'; }); return; }
         ok.disabled = false;
@@ -104,7 +122,7 @@
         body = '<p class="track-need">' + I('lock') + '<span>À valider d’abord : ' + move.missing.map(function (c) { return '<a href="#/competence/' + c + '">' + esc(title(c)) + '</a>'; }).join(', ') + '</span></p>' +
           (move.placements.length ? '<p class="muted small">Déjà expérimenté ? ' + move.placements.map(function (p) { return '<a href="#/evaluations/' + p.id + '">' + esc(p.title) + '</a>'; }).join(' · ') + '</p>' : '');
       }
-      return '<article class="course' + (isCurrent ? ' course--current' : '') + '"><header class="course__head"><h2>' + esc(s.title) + '</h2></header><p>' + esc(s.text) + '</p><p class="muted small">' + esc(availability(s)) + '</p>' + body + '</article>';
+      return '<article class="course' + (isCurrent ? ' course--current' : '') + '"><header class="course__head"><h2>' + esc(s.title) + '</h2>' + soonBadge(s) + '</header><p>' + esc(s.text) + '</p><p class="muted small">' + esc(availability(s)) + '</p>' + body + '</article>';
     }).join('');
     var history = (off.history || []).map(function (h) {
       return '<li>' + esc(h.kind === 'initial' ? 'Parcours choisi : ' + CUR.trackLabel(h.to_space, h.to_specialization) : CUR.trackLabel(h.from_space, h.from_specialization) + ' → ' + CUR.trackLabel(h.to_space, h.to_specialization)) + ' <span class="muted">' + esc(U.formatWhen(h.at)) + '</span></li>';
