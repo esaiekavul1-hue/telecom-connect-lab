@@ -594,6 +594,31 @@ async function rejects(p, re) {
     assert.ok((await L.rpc(cw, 'start_attempt', { p_assessment: 'final-circuits' })).attempt_id, 'après une réussite, un échec ne coûte que 30 min');
   });
 
+  console.log('\nLimites de la progression');
+  var mig6 = fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261112000100_v2_progress_limits.sql'), 'utf8');
+  await test('progression : écriture normale acceptée, plus de 1 Mo refusée, ancienne progression intacte', async function () {
+    var u = await L.createUser('volume@exemple.org');
+    var write = function (data) { return L.as(u, 'authenticated', function (tx) { return tx.query('insert into public.progress (user_id, data) values ($1, $2) on conflict (user_id) do update set data = excluded.data', [u, data]); }); };
+    await write({ lessons: { circuits: { chapters: { c1: '2026-11-01' } } } });
+    await rejects(write({ blob: 'x'.repeat(1100000) + Math.random() }), /progress_data_size/);
+    var big = { blob: Array.from({ length: 1200000 }, function (_, i) { return String.fromCharCode(33 + (i * 7919) % 90); }).join('') };
+    await rejects(write(big), /progress_data_size/);
+    assert.deepStrictEqual((await L.db.query('select data from public.progress where user_id = $1', [u])).rows[0].data, { lessons: { circuits: { chapters: { c1: '2026-11-01' } } } });
+    assert.deepStrictEqual((await L.db.query('select data from public.progress where user_id = $1', [existingUser])).rows[0].data, existingProgress);
+  });
+  await test('progression : TRUNCATE refusé aux comptes connectés et aux visiteurs', async function () {
+    await rejects(L.as(a, 'authenticated', function (tx) { return tx.query('truncate public.progress'); }), /permission denied/);
+    await rejects(L.as(null, 'anon', function (tx) { return tx.query('truncate public.progress'); }), /permission denied/);
+  });
+  await test('limites de la progression : rejouables puis annulables sans perte', async function () {
+    await L.db.exec(mig6); await L.db.exec(mig6);
+    var n = (await L.db.query('select count(*)::int n from public.progress')).rows[0].n;
+    await L.db.exec(fs.readFileSync(path.join(__dirname, '../supabase/rollback/20261112000100_v2_progress_limits.down.sql'), 'utf8'));
+    assert.strictEqual((await L.db.query("select count(*)::int n from pg_constraint where conname = 'progress_data_size'")).rows[0].n, 0);
+    assert.strictEqual((await L.db.query('select count(*)::int n from public.progress')).rows[0].n, n);
+    await L.db.exec(mig6);
+  });
+
   console.log('\nRéversibilité');
   await test('la sécurisation se rejoue puis s’annule sans perte', async function () {
     await replay4();
